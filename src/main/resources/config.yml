@@ -1,0 +1,21 @@
+# Your MySQL Database
+mysql:
+  host: localhost
+  port: 3306
+  database: database-here
+  user: user-here
+  password: password-here
+
+# Setup how long you want the logs to last (in days)
+log-file: entregas.log
+log-retention-days: 365
+
+# Setup how frequent you want the plugin looking for updates (in minutes)
+check-interval-minutes: 5
+
+# Configure your custom products, here some examples
+products:
+  #WooCommerce Product Name: Item from Minecraft
+  diamond: minecraft:diamond
+  epic chest: minecraft:chest
+  legendary sword: minecraft:diamond_sword

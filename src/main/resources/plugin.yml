@@ -1,0 +1,12 @@
+name: WooStoreLink
+version: ${version}
+main: com.nocticraft.woostorelink.WooStoreLink
+api-version: 1.20
+author: MrDinoCarlos
+
+commands:
+  entregas:
+    description: Comandos para entrega de productos
+    usage: /entregas <reload|check>
+    permission: woostorelink.admin
+    permission-message: No tienes permiso para usar este comando.
