@@ -1,0 +1,41 @@
+prefix: "[WooStoreLink]"
+
+messages:
+  # General
+  no-permission: "You do not have permission to use this command."
+  player-only: "This command can only be used by players."
+  command-usage: "Usage: /deliveries <reload|check|check-now|log>"
+
+  # Reload
+  reloaded: "WooStoreLink reloaded successfully."
+
+  # Check
+  check-pending: "You have pending: {item} x{amount}"
+  check-none: "You have no pending deliveries."
+  check-error: "Error checking your deliveries."
+
+  # Check-now
+  forced-check: "Forced delivery check executed."
+
+  # Log
+  log-header: "Delivery log for {player}:"
+  log-empty: "No deliveries found for {player}."
+  log-error: "Error fetching delivery log."
+
+  # Console and logs
+  plugin-enabled: "WooStoreLink successfully enabled."
+  auto-check: "Checking pending deliveries for online players..."
+  db-connected: "MySQL connection established."
+  db-error: "MySQL connection error:"
+  reconnecting-db: "Reestablishing MySQL connection..."
+  connection-check-error: "Connection check error:"
+  delivery-failed: "Could not deliver to"
+  player-db-error: "Failed to check your deliveries due to a database error."
+  products-section-missing: "Section 'products' not found in config.yml."
+  product-not-configured: "Product not configured:"
+  product-not-configured-player: "Product"
+  product-not-configured-player-2: "is not configured on this server."
+  delivered: "Delivered to"
+  delivery-error: "Delivery error for"
+  log-deleted: "Old log removed:"
+  error-closing-connection: "Error closing connection:"

@@ -1,4 +1,4 @@
-# Your MySQL Database
+# MySQL Database Settings
 mysql:
   host: localhost
   port: 3306
@@ -6,16 +6,20 @@ mysql:
   user: user-here
   password: password-here
 
-# Setup how long you want the logs to last (in days)
-log-file: entregas.log
-log-retention-days: 365
+# Plugin language (en or es)
+lang: en
 
-# Setup how frequent you want the plugin looking for updates (in minutes)
-check-interval-minutes: 5
+# How long transaction logs should be kept (in days)
+log-file: deliveries.log
+log-retention-days: 30  # 1 month
 
-# Configure your custom products, here some examples
+# How often to check for pending deliveries (in minutes)
+check-interval-minutes: 1
+
+# Language: en (default), es (Spanish)
+language: en
+
+# Products mapping: WooCommerce product name => Minecraft item ID
 products:
-  #WooCommerce Product Name: Item from Minecraft
+  test: minecraft:dirt
   diamond: minecraft:diamond
-  epic chest: minecraft:chest
-  legendary sword: minecraft:diamond_sword

@@ -3,7 +3,7 @@ plugins {
 }
 
 group = 'com.nocticraft'
-version = '1.20.1-0.3.2'
+version = '1.20.1-0.4.1'
 processResources {
     filesMatching("plugin.yml") {
         expand 'version': project.version

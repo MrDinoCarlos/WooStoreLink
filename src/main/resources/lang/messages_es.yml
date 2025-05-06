@@ -1,0 +1,41 @@
+prefix: "[WooStoreLink]"
+
+messages:
+  # General
+  no-permission: "No tienes permiso para usar este comando."
+  player-only: "Este comando solo puede ser usado por jugadores."
+  command-usage: "Uso: /deliveries <reload|check|check-now|log>"
+
+  # Reload
+  reloaded: "WooStoreLink recargado con éxito."
+
+  # Check
+  check-pending: "Tienes pendiente: {item} x{amount}"
+  check-none: "No tienes entregas pendientes."
+  check-error: "Error al consultar tus entregas."
+
+  # Check-now
+  forced-check: "Revisión forzada de entregas ejecutada."
+
+  # Log
+  log-header: "Historial de entregas de {player}:"
+  log-empty: "No se encontraron entregas para {player}."
+  log-error: "Error al obtener el historial de entregas."
+
+  # Console and logs
+  plugin-enabled: "WooStoreLink activado correctamente."
+  auto-check: "Comprobando entregas pendientes para jugadores conectados..."
+  db-connected: "Conexión MySQL establecida."
+  db-error: "Error de conexión MySQL:"
+  reconnecting-db: "Reconectando a MySQL..."
+  connection-check-error: "Error al verificar la conexión:"
+  delivery-failed: "No se pudo entregar a"
+  player-db-error: "No se pudo comprobar tus entregas por un error de conexión."
+  products-section-missing: "Sección 'products' no encontrada en config.yml."
+  product-not-configured: "Producto no configurado:"
+  product-not-configured-player: "El producto"
+  product-not-configured-player-2: "no está configurado en este servidor."
+  delivered: "Entregado a"
+  delivery-error: "Error al entregar a"
+  log-deleted: "Log antiguo eliminado:"
+  error-closing-connection: "Error al cerrar la conexión:"
