@@ -1,6 +1,7 @@
 package com.nocticraft.woostorelink;
 
-import com.nocticraft.woostorelink.commands.DeliveriesCommand;
+import com.nocticraft.woostorelink.utils.StartupDisplay;
+import com.nocticraft.woostorelink.commands.WSLCommand;
 import com.nocticraft.woostorelink.utils.LanguageLoader;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
@@ -31,13 +32,10 @@ public class WooStoreLink extends JavaPlugin implements Listener {
         loadLanguage();
         cleanOldLogs();
         connectToDatabase();
-
         getLogger().info("🌐 Loaded language: " + currentLangCode + " | Example: " + lang.get("plugin-enabled"));
-
         Bukkit.getPluginManager().registerEvents(this, this);
-        getCommand("deliveries").setExecutor(new DeliveriesCommand(this));
-
-        logDelivery(lang.getOrDefault("plugin-enabled", "WooStoreLink successfully enabled."));
+        getCommand("wsl").setExecutor(new WSLCommand(this));
+        StartupDisplay.show(this, connection, lang);
 
         int minutes = getConfig().getInt("check-interval-minutes", 1);
         long ticks = minutes * 60L * 20L;
@@ -50,7 +48,7 @@ public class WooStoreLink extends JavaPlugin implements Listener {
         }, 20L, ticks);
     }
 
-    private void loadLanguage() {
+    public void loadLanguage() {
         currentLangCode = getConfig().getString("language", "en");
         lang = new LanguageLoader(this);
         lang.load(currentLangCode);
@@ -63,6 +61,7 @@ public class WooStoreLink extends JavaPlugin implements Listener {
         } catch (SQLException e) {
             logDelivery("❌ " + lang.getOrDefault("error-closing-connection", "Error closing connection:") + " " + e.getMessage());
         }
+        Bukkit.getConsoleSender().sendMessage("§c✖ WooStoreLink has been disabled.");
     }
 
     public void connectToDatabase() {

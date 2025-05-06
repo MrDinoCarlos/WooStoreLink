@@ -28,6 +28,7 @@ messages:
   log-deleted: "Log antiguo eliminado:"
 
   # Console and logs
+  startup-ready: "WSL estáa listo para recibir pedidos de WooCommerce."
   auto-check: "Comprobando entregas pendientes para jugadores conectados..."
   db-connected: "Conexión MySQL establecida."
   db-error: "Error de conexión MySQL:"

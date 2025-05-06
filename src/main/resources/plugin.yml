@@ -5,9 +5,39 @@ api-version: 1.20
 author: MrDinoCarlos
 
 commands:
-  deliveries:
-    description: Commands for store product deliveries
-    usage: /deliveries <reload|check|log>
+  wsl:
+    description: Opens WooStoreLink functionality
+    usage: /wsl
     permission: woostorelink.admin
     permission-message: You do not have permission to use this command.
 
+permissions:
+  woostorelink.admin:
+    description: Access to all WooStoreLink commands
+    default: op
+    children:
+      woostorelink.reload: true
+      woostorelink.check: true
+      woostorelink.check.others: true
+      woostorelink.status: true
+      woostorelink.help: true
+
+  woostorelink.reload:
+    description: Allows /wsl reload
+    default: op
+
+  woostorelink.check:
+    description: Allows /wsl check
+    default: true
+
+  woostorelink.check.others:
+    description: Allows /wsl checkplayer <player>
+    default: op
+
+  woostorelink.status:
+    description: Allows /wsl status
+    default: true
+
+  woostorelink.help:
+    description: Allows /wsl help
+    default: true

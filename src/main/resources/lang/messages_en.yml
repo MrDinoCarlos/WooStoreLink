@@ -26,6 +26,7 @@ messages:
   log-deleted: "Old log removed:"
 
   # Console and logs
+  startup-ready: "WSL is ready to receive WooCommerce orders."
   plugin-enabled: "WooStoreLink successfully enabled."
   auto-check: "Checking pending deliveries for online players..."
   db-connected: "MySQL connection established."
