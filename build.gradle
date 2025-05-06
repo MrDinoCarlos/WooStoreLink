@@ -1,3 +1,5 @@
+import org.gradle.api.file.DuplicatesStrategy
+
 plugins {
     id 'java'
 }
@@ -19,12 +21,13 @@ dependencies {
     compileOnly 'org.spigotmc:spigot-api:1.20.1-R0.1-SNAPSHOT'
 }
 
-
 processResources {
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
     from("src/main/resources") {
         include "**/*"
     }
 }
+
 jar {
     destinationDirectory.set(file("build/jars"))
 }
