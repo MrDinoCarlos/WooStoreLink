@@ -22,6 +22,8 @@ public class WooStoreLink extends JavaPlugin implements Listener {
 
     private Connection connection;
     private LanguageLoader lang;
+    private String currentLangCode = "en"; // default
+
 
     @Override
     public void onEnable() {
@@ -29,6 +31,8 @@ public class WooStoreLink extends JavaPlugin implements Listener {
         loadLanguage();
         cleanOldLogs();
         connectToDatabase();
+
+        getLogger().info("🌐 Loaded language: " + currentLangCode + " | Example: " + lang.get("plugin-enabled"));
 
         Bukkit.getPluginManager().registerEvents(this, this);
         getCommand("deliveries").setExecutor(new DeliveriesCommand(this));
@@ -47,9 +51,9 @@ public class WooStoreLink extends JavaPlugin implements Listener {
     }
 
     private void loadLanguage() {
-        String langCode = getConfig().getString("language", "en");
+        currentLangCode = getConfig().getString("language", "en");
         lang = new LanguageLoader(this);
-        lang.load(langCode);
+        lang.load(currentLangCode);
     }
 
     @Override
@@ -69,7 +73,7 @@ public class WooStoreLink extends JavaPlugin implements Listener {
         String user = config.getString("mysql.user");
         String pass = config.getString("mysql.password");
 
-        String url = "jdbc:mysql://" + host + ":" + port + "/" + db + "?autoReconnect=true&useSSL=false";
+        String url = "jdbc:mysql://" + host + ":" + port + "/" + db + "?autoReconnect=true&useSSL=false&serverTimezone=UTC";
 
         try {
             connection = DriverManager.getConnection(url, user, pass);
@@ -104,11 +108,11 @@ public class WooStoreLink extends JavaPlugin implements Listener {
 
         try {
             PreparedStatement stmt = connection.prepareStatement(
-                    "SELECT id, item, cantidad FROM entregas_pendientes WHERE jugador = ? AND entregado = 0");
+                    "SELECT id, item, amount FROM pending_deliveries WHERE player = ? AND delivered = 0");
             stmt.setString(1, player.getName());
             ResultSet rs = stmt.executeQuery();
 
-            boolean delivered = false;
+            boolean deliveredSomething = false;
 
             ConfigurationSection productSection = getConfig().getConfigurationSection("products");
             if (productSection == null) {
@@ -122,6 +126,7 @@ public class WooStoreLink extends JavaPlugin implements Listener {
             while (rs.next()) {
                 int id = rs.getInt("id");
                 String productName = rs.getString("item").toLowerCase();
+                int amount = rs.getInt("amount");
                 String item = null;
 
                 for (String key : productSection.getKeys(false)) {
@@ -139,19 +144,25 @@ public class WooStoreLink extends JavaPlugin implements Listener {
                     continue;
                 }
 
-                int amount = rs.getInt("cantidad");
+                String type = productSection.getConfigurationSection(productName).getString("type", "item");
+                String value = productSection.getConfigurationSection(productName).getString("value");
 
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "give " + player.getName() + " " + item + " " + amount);
+                if (type.equalsIgnoreCase("item")) {
+                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "give " + player.getName() + " " + value + " " + amount);
+                } else if (type.equalsIgnoreCase("command")) {
+                    String command = value.replace("{player}", player.getName());
+                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
+                }
 
-                PreparedStatement update = connection.prepareStatement("UPDATE entregas_pendientes SET entregado = 1 WHERE id = ?");
+                PreparedStatement update = connection.prepareStatement("UPDATE pending_deliveries SET delivered = 1 WHERE id = ?");
                 update.setInt(1, id);
                 update.executeUpdate();
 
                 logDelivery("✔ " + lang.getOrDefault("delivered", "Delivered to") + " " + player.getName() + ": " + item + " x" + amount);
-                delivered = true;
+                deliveredSomething = true;
             }
 
-            if (delivered) {
+            if (deliveredSomething) {
                 player.sendMessage("§a" + lang.getOrDefault("player-delivered", "You have received your pending delivery from the store."));
             }
 

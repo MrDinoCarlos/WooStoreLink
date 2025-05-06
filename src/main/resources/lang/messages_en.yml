@@ -2,25 +2,27 @@ prefix: "[WooStoreLink]"
 
 messages:
   # General
+  usage: "Usage: /deliveries <reload|check|check-now|log <player>>"
   no-permission: "You do not have permission to use this command."
   player-only: "This command can only be used by players."
-  command-usage: "Usage: /deliveries <reload|check|check-now|log>"
 
   # Reload
   reloaded: "WooStoreLink reloaded successfully."
 
   # Check
-  check-pending: "You have pending: {item} x{amount}"
-  check-none: "You have no pending deliveries."
-  check-error: "Error checking your deliveries."
+  pending-item: "Pending:"
+  no-pending: "You have no pending deliveries."
+  error-checking: "Error checking your deliveries."
 
   # Check-now
   forced-check: "Forced delivery check executed."
 
   # Log
-  log-header: "Delivery log for {player}:"
-  log-empty: "No deliveries found for {player}."
-  log-error: "Error fetching delivery log."
+  log-usage: "Usage: /deliveries log <player>"
+  logs-for: "Delivery log for"
+  log-folder-missing: "Log folder not found."
+  log-read-error: "Failed to read log file:"
+  log-deleted: "Old log removed:"
 
   # Console and logs
   plugin-enabled: "WooStoreLink successfully enabled."
@@ -37,5 +39,4 @@ messages:
   product-not-configured-player-2: "is not configured on this server."
   delivered: "Delivered to"
   delivery-error: "Delivery error for"
-  log-deleted: "Old log removed:"
   error-closing-connection: "Error closing connection:"

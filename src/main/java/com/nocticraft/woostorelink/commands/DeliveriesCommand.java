@@ -1,7 +1,6 @@
 package com.nocticraft.woostorelink.commands;
 
 import com.nocticraft.woostorelink.WooStoreLink;
-import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -28,7 +27,7 @@ public class DeliveriesCommand implements CommandExecutor {
         var lang = plugin.getLang();
 
         if (args.length == 0) {
-            sender.sendMessage("§e" + lang.getOrDefault("usage", "Usage: /deliveries <reload|check|check-now|log <player>>"));
+            sender.sendMessage("§e" + plugin.getLang().getOrDefault("usage", "Usage: /deliveries <reload|check|check-now|log <player>>"));
             return true;
         }
 
@@ -41,8 +40,11 @@ public class DeliveriesCommand implements CommandExecutor {
                 plugin.reloadConfig();
                 plugin.cleanOldLogs();
                 plugin.connectToDatabase();
-                plugin.getLang().load(plugin.getConfig().getString("language", "en"));
-                sender.sendMessage("§a" + lang.getOrDefault("reloaded", "WooStoreLink reloaded successfully."));
+
+                String language = plugin.getConfig().getString("language", "en");
+                plugin.getLang().load(language);
+
+                sender.sendMessage("§a" + plugin.getLang().getOrDefault("reloaded", "WooStoreLink reloaded successfully."));
                 return true;
 
             case "check":
@@ -50,8 +52,7 @@ public class DeliveriesCommand implements CommandExecutor {
                     sender.sendMessage("§c" + lang.getOrDefault("player-only", "This command can only be used by players."));
                     return true;
                 }
-                Player player = (Player) sender;
-                showPendingDeliveries(player);
+                showPendingDeliveries((Player) sender);
                 return true;
 
             case "check-now":
@@ -59,8 +60,7 @@ public class DeliveriesCommand implements CommandExecutor {
                     sender.sendMessage("§c" + lang.getOrDefault("player-only", "This command can only be used by players."));
                     return true;
                 }
-                Player checkNowPlayer = (Player) sender;
-                plugin.processPendingDeliveries(checkNowPlayer);
+                plugin.processPendingDeliveries((Player) sender);
                 return true;
 
             case "log":
@@ -68,14 +68,11 @@ public class DeliveriesCommand implements CommandExecutor {
                     sender.sendMessage("§c" + lang.getOrDefault("no-permission", "You do not have permission to use this command."));
                     return true;
                 }
-
                 if (args.length < 2) {
                     sender.sendMessage("§e" + lang.getOrDefault("log-usage", "Usage: /deliveries log <player>"));
                     return true;
                 }
-
-                String playerName = args[1];
-                showLogForPlayer(sender, playerName);
+                showLogForPlayer(sender, args[1]);
                 return true;
 
             default:
@@ -87,15 +84,17 @@ public class DeliveriesCommand implements CommandExecutor {
     private void showPendingDeliveries(Player player) {
         try {
             PreparedStatement stmt = plugin.getConnection().prepareStatement(
-                    "SELECT item, cantidad FROM entregas_pendientes WHERE jugador = ? AND entregado = 0");
+                    "SELECT item, amount FROM pending_deliveries WHERE player = ? AND delivered = 0"
+            );
             stmt.setString(1, player.getName());
             ResultSet rs = stmt.executeQuery();
 
             boolean found = false;
             while (rs.next()) {
                 String item = rs.getString("item");
-                int cantidad = rs.getInt("cantidad");
-                player.sendMessage("§a" + plugin.getLang().getOrDefault("pending-item", "Pending:") + " §e" + item + " x" + cantidad);
+                int amount = rs.getInt("amount");
+                player.sendMessage("§a" + plugin.getLang().getOrDefault("pending-item", "Pending:") +
+                        " §e" + item + " x" + amount);
                 found = true;
             }
 

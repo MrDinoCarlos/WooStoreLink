@@ -1,29 +1,31 @@
 prefix: "[WooStoreLink]"
 
 messages:
+  plugin-enabled: "WooStoreLink activado correctamente."
   # General
+  usage: "Uso: /deliveries <reload|check|check-now|log <player>>"
   no-permission: "No tienes permiso para usar este comando."
   player-only: "Este comando solo puede ser usado por jugadores."
-  command-usage: "Uso: /deliveries <reload|check|check-now|log>"
 
   # Reload
   reloaded: "WooStoreLink recargado con éxito."
 
   # Check
-  check-pending: "Tienes pendiente: {item} x{amount}"
-  check-none: "No tienes entregas pendientes."
-  check-error: "Error al consultar tus entregas."
+  pending-item: "Pendiente:"
+  no-pending: "No tienes entregas pendientes."
+  error-checking: "Error al consultar tus entregas."
 
   # Check-now
   forced-check: "Revisión forzada de entregas ejecutada."
 
   # Log
-  log-header: "Historial de entregas de {player}:"
-  log-empty: "No se encontraron entregas para {player}."
-  log-error: "Error al obtener el historial de entregas."
+  log-usage: "Uso: /deliveries log <player>"
+  logs-for: "Historial de entregas de"
+  log-folder-missing: "Carpeta de logs no encontrada."
+  log-read-error: "Error al leer el archivo de log:"
+  log-deleted: "Log antiguo eliminado:"
 
   # Console and logs
-  plugin-enabled: "WooStoreLink activado correctamente."
   auto-check: "Comprobando entregas pendientes para jugadores conectados..."
   db-connected: "Conexión MySQL establecida."
   db-error: "Error de conexión MySQL:"
@@ -37,5 +39,4 @@ messages:
   product-not-configured-player-2: "no está configurado en este servidor."
   delivered: "Entregado a"
   delivery-error: "Error al entregar a"
-  log-deleted: "Log antiguo eliminado:"
   error-closing-connection: "Error al cerrar la conexión:"

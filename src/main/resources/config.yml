@@ -18,5 +18,13 @@ check-interval-minutes: 1
 
 # Products mapping: WooCommerce product name => Minecraft item ID
 products:
-  test: minecraft:dirt
-  diamond: minecraft:diamond
+  test:
+    items:
+      - minecraft:dirt 5
+    commands:
+      - "say Gracias por tu compra, {player}!"
+      - "title {player} title {\"text\":\"¡Compra completada!\",\"color\":\"gold\"}"
+
+  diamond:
+    commands:
+      - "gamemode creative {player}"
