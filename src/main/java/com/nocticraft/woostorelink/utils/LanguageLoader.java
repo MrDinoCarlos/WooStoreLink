@@ -1,6 +1,5 @@
 package com.nocticraft.woostorelink.utils;
 
-import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -11,33 +10,41 @@ import java.util.Map;
 public class LanguageLoader {
 
     private final JavaPlugin plugin;
-    private Map<String, String> messages;
+    private final Map<String, String> messages = new HashMap<>();
 
     public LanguageLoader(JavaPlugin plugin) {
         this.plugin = plugin;
-        this.messages = new HashMap<>();
     }
 
     public void load(String langCode) {
-        messages.clear();  // limpia anteriores si recargas
-        File langFile = new File(plugin.getDataFolder(), "lang/messages_" + langCode + ".yml");
-        if (!langFile.exists()) {
-            plugin.getLogger().warning("⚠ Language file not found: messages_" + langCode + ".yml. Defaulting to English.");
-            langFile = new File(plugin.getDataFolder(), "lang/messages_en.yml");
-        }
+        messages.clear();
 
-        if (langFile.exists()) {
-            try {
-                YamlConfiguration config = YamlConfiguration.loadConfiguration(langFile);
-                for (String key : config.getKeys(true)) {
-                    messages.put(key, config.getString(key));
-                }
-            } catch (Exception e) {
-                plugin.getLogger().severe("❌ Failed to load language file: " + e.getMessage());
+        File langFolder = new File(plugin.getDataFolder(), "lang");
+        if (!langFolder.exists()) langFolder.mkdirs();
+
+        File langFile = new File(langFolder, "messages_" + langCode + ".yml");
+        String resourcePath = "lang/messages_" + langCode + ".yml";
+
+        if (!langFile.exists()) {
+            if (plugin.getResource(resourcePath) != null) {
+                plugin.saveResource(resourcePath, false);
+                plugin.getLogger().info("✅ Copied language file: " + resourcePath);
+            } else {
+                plugin.getLogger().warning("⚠ Language file not found in JAR: " + resourcePath + ". Defaulting to English.");
+                langFile = new File(langFolder, "messages_en.yml");
+                plugin.saveResource("lang/messages_en.yml", false);
             }
         }
-    }
 
+        try {
+            YamlConfiguration config = YamlConfiguration.loadConfiguration(langFile);
+            for (String key : config.getKeys(true)) {
+                messages.put(key, config.getString(key));
+            }
+        } catch (Exception e) {
+            plugin.getLogger().severe("❌ Failed to load language file: " + e.getMessage());
+        }
+    }
 
     public String get(String key) {
         return messages.getOrDefault(key, "§c[Missing lang: " + key + "]");

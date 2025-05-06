@@ -6,8 +6,8 @@ mysql:
   user: user-here
   password: password-here
 
-# Plugin language (en or es)
-lang: en
+# Language: en (default), es (Spanish)
+language: en
 
 # How long transaction logs should be kept (in days)
 log-file: deliveries.log
@@ -15,9 +15,6 @@ log-retention-days: 30  # 1 month
 
 # How often to check for pending deliveries (in minutes)
 check-interval-minutes: 1
-
-# Language: en (default), es (Spanish)
-language: en
 
 # Products mapping: WooCommerce product name => Minecraft item ID
 products:

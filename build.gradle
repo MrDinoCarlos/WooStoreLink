@@ -5,16 +5,13 @@ plugins {
 }
 
 group = 'com.nocticraft'
-version = '1.20.1-0.4.2'
-processResources {
-    filesMatching("plugin.yml") {
-        expand 'version': project.version
-    }
-}
+version = '1.20.1-0.4.5'
 
 repositories {
     mavenCentral()
-    maven { url = 'https://hub.spigotmc.org/nexus/content/repositories/snapshots/' }
+    maven {
+        url = 'https://hub.spigotmc.org/nexus/content/repositories/snapshots/'
+    }
 }
 
 dependencies {
@@ -22,9 +19,16 @@ dependencies {
 }
 
 processResources {
+    // Asegura que no haya conflicto al copiar archivos duplicados
     duplicatesStrategy = DuplicatesStrategy.INCLUDE
+
     from("src/main/resources") {
         include "**/*"
+    }
+
+    // Expande versión automáticamente en plugin.yml
+    filesMatching("plugin.yml") {
+        expand 'version': project.version
     }
 }
 
