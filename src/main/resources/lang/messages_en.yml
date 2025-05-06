@@ -5,6 +5,7 @@ messages:
   usage: "Usage: /deliveries <reload|check|check-now|log <player>>"
   no-permission: "You do not have permission to use this command."
   player-only: "This command can only be used by players."
+  player-delivered: "You have received your pending delivery from the store."
 
   # Reload
   reloaded: "WooStoreLink reloaded successfully."

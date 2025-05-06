@@ -17,13 +17,13 @@ import java.io.IOException;
 import java.sql.*;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
 
 public class WooStoreLink extends JavaPlugin implements Listener {
 
     private Connection connection;
     private LanguageLoader lang;
     private String currentLangCode = "en"; // default
-
 
     @Override
     public void onEnable() {
@@ -113,9 +113,9 @@ public class WooStoreLink extends JavaPlugin implements Listener {
             ResultSet rs = stmt.executeQuery();
 
             boolean deliveredSomething = false;
+            ConfigurationSection products = getConfig().getConfigurationSection("products");
 
-            ConfigurationSection productSection = getConfig().getConfigurationSection("products");
-            if (productSection == null) {
+            if (products == null) {
                 logDelivery("⚠ " + lang.getOrDefault("products-section-missing", "Section 'products' not found in config.yml."));
                 if (player.isOp()) {
                     player.sendMessage("§c" + lang.getOrDefault("products-section-missing", "Section 'products' not found in config.yml."));
@@ -127,16 +127,8 @@ public class WooStoreLink extends JavaPlugin implements Listener {
                 int id = rs.getInt("id");
                 String productName = rs.getString("item").toLowerCase();
                 int amount = rs.getInt("amount");
-                String item = null;
 
-                for (String key : productSection.getKeys(false)) {
-                    if (key.equalsIgnoreCase(productName)) {
-                        item = productSection.getString(key);
-                        break;
-                    }
-                }
-
-                if (item == null || item.isEmpty()) {
+                if (!products.contains(productName)) {
                     logDelivery("❌ " + lang.getOrDefault("product-not-configured", "Product not configured:") + " " + productName);
                     if (player.isOp()) {
                         player.sendMessage("§c" + lang.getOrDefault("product-not-configured-player", "Product") + " §e" + productName + "§c " + lang.getOrDefault("product-not-configured-player-2", "is not configured on this server."));
@@ -144,21 +136,44 @@ public class WooStoreLink extends JavaPlugin implements Listener {
                     continue;
                 }
 
-                String type = productSection.getConfigurationSection(productName).getString("type", "item");
-                String value = productSection.getConfigurationSection(productName).getString("value");
+                ConfigurationSection productConfig = products.getConfigurationSection(productName);
+                if (productConfig == null) continue;
 
-                if (type.equalsIgnoreCase("item")) {
-                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "give " + player.getName() + " " + value + " " + amount);
-                } else if (type.equalsIgnoreCase("command")) {
-                    String command = value.replace("{player}", player.getName());
-                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
+                if (productConfig.contains("type")) {
+                    String type = productConfig.getString("type");
+                    String value = productConfig.getString("value");
+
+                    if ("item".equalsIgnoreCase(type)) {
+                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "give " + player.getName() + " " + value + " " + amount);
+                    } else if ("command".equalsIgnoreCase(type)) {
+                        String command = value.replace("{player}", player.getName());
+                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
+                    }
+                } else {
+                    // Support for multiple items or commands
+                    if (productConfig.contains("items")) {
+                        List<String> items = productConfig.getStringList("items");
+                        for (String entry : items) {
+                            String[] split = entry.split(" ");
+                            String item = split[0];
+                            int amt = (split.length > 1) ? Integer.parseInt(split[1]) : 1;
+                            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "give " + player.getName() + " " + item + " " + amt);
+                        }
+                    }
+
+                    if (productConfig.contains("commands")) {
+                        List<String> commands = productConfig.getStringList("commands");
+                        for (String cmd : commands) {
+                            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd.replace("{player}", player.getName()));
+                        }
+                    }
                 }
 
                 PreparedStatement update = connection.prepareStatement("UPDATE pending_deliveries SET delivered = 1 WHERE id = ?");
                 update.setInt(1, id);
                 update.executeUpdate();
 
-                logDelivery("✔ " + lang.getOrDefault("delivered", "Delivered to") + " " + player.getName() + ": " + item + " x" + amount);
+                logDelivery("✔ " + lang.getOrDefault("delivered", "Delivered to") + " " + player.getName() + ": " + productName + " x" + amount);
                 deliveredSomething = true;
             }
 

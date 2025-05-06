@@ -16,14 +16,14 @@ log-retention-days: 30  # 1 month
 # How often to check for pending deliveries (in minutes)
 check-interval-minutes: 1
 
-# Products mapping: WooCommerce product name => Minecraft item ID
+# Products mapping: WooCommerce product name => Minecraft actions
 products:
   test:
     items:
       - minecraft:dirt 5
     commands:
-      - "say Gracias por tu compra, {player}!"
-      - "title {player} title {\"text\":\"¡Compra completada!\",\"color\":\"gold\"}"
+      - "say Thank you for your purchase, {player}!"
+      - "title {player} title {\"text\":\"Purchase Complete!\",\"color\":\"gold\"}"
 
   diamond:
     commands:
