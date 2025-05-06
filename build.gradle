@@ -3,7 +3,7 @@ plugins {
 }
 
 group = 'com.nocticraft'
-version = '1.20.1-0.4.1'
+version = '1.20.1-0.4.2'
 processResources {
     filesMatching("plugin.yml") {
         expand 'version': project.version
@@ -19,6 +19,12 @@ dependencies {
     compileOnly 'org.spigotmc:spigot-api:1.20.1-R0.1-SNAPSHOT'
 }
 
+
+processResources {
+    from("src/main/resources") {
+        include "**/*"
+    }
+}
 jar {
     destinationDirectory.set(file("build/jars"))
 }
