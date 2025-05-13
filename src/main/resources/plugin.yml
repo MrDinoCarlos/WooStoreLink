@@ -3,17 +3,19 @@ version: ${version}
 main: com.nocticraft.woostorelink.WooStoreLink
 api-version: 1.20
 author: MrDinoCarlos
+website: https://nocticraft.com
+discord: https://discord.gg/ddyfucfZpy
 
 commands:
   wsl:
-    description: Opens WooStoreLink functionality
-    usage: /wsl
+    description: WooStoreLink management command
+    usage: /wsl [help|reload|check|checkplayer|status]
     permission: woostorelink.admin
     permission-message: You do not have permission to use this command.
 
 permissions:
   woostorelink.admin:
-    description: Access to all WooStoreLink commands
+    description: Full access to WooStoreLink commands
     default: op
     children:
       woostorelink.reload: true

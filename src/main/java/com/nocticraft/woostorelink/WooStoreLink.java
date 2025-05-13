@@ -1,11 +1,9 @@
 package com.nocticraft.woostorelink;
 
-import com.nocticraft.woostorelink.utils.StartupDisplay;
 import com.nocticraft.woostorelink.commands.WSLCommand;
-import com.nocticraft.woostorelink.utils.LanguageLoader;
+import com.nocticraft.woostorelink.utils.*;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -15,27 +13,31 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.sql.*;
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class WooStoreLink extends JavaPlugin implements Listener {
 
-    private Connection connection;
     private LanguageLoader lang;
-    private String currentLangCode = "en"; // default
+    private String currentLangCode = "en";
+    private DeliveryFetcher fetcher;
+
+    // 🔒 Cache local para evitar entregas duplicadas antes de que el backend responda
+    private final Set<Integer> recentlyDelivered = new HashSet<>();
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
         loadLanguage();
         cleanOldLogs();
-        connectToDatabase();
+
+        fetcher = new DeliveryFetcher(this);
+
         getLogger().info("🌐 Loaded language: " + currentLangCode + " | Example: " + lang.get("plugin-enabled"));
         Bukkit.getPluginManager().registerEvents(this, this);
         getCommand("wsl").setExecutor(new WSLCommand(this));
-        StartupDisplay.show(this, connection, lang);
+        StartupDisplay.show(this, lang);
 
         int minutes = getConfig().getInt("check-interval-minutes", 1);
         long ticks = minutes * 60L * 20L;
@@ -56,31 +58,7 @@ public class WooStoreLink extends JavaPlugin implements Listener {
 
     @Override
     public void onDisable() {
-        try {
-            if (connection != null && !connection.isClosed()) connection.close();
-        } catch (SQLException e) {
-            logDelivery("❌ " + lang.getOrDefault("error-closing-connection", "Error closing connection:") + " " + e.getMessage());
-        }
         Bukkit.getConsoleSender().sendMessage("§c✖ WooStoreLink has been disabled.");
-    }
-
-    public void connectToDatabase() {
-        FileConfiguration config = getConfig();
-        String host = config.getString("mysql.host");
-        int port = config.getInt("mysql.port");
-        String db = config.getString("mysql.database");
-        String user = config.getString("mysql.user");
-        String pass = config.getString("mysql.password");
-
-        String url = "jdbc:mysql://" + host + ":" + port + "/" + db + "?autoReconnect=true&useSSL=false&serverTimezone=UTC";
-
-        try {
-            connection = DriverManager.getConnection(url, user, pass);
-            logDelivery("✅ " + lang.getOrDefault("db-connected", "MySQL connection established."));
-        } catch (SQLException e) {
-            connection = null;
-            logDelivery("❌ " + lang.getOrDefault("db-error", "MySQL connection error:") + " " + e.getMessage());
-        }
     }
 
     @EventHandler
@@ -89,54 +67,40 @@ public class WooStoreLink extends JavaPlugin implements Listener {
     }
 
     public void processPendingDeliveries(Player player) {
-        try {
-            if (connection == null || connection.isClosed()) {
-                logDelivery("⚠ " + lang.getOrDefault("reconnecting-db", "Reestablishing MySQL connection..."));
-                connectToDatabase();
-            }
-        } catch (SQLException e) {
-            logDelivery("❌ " + lang.getOrDefault("connection-check-error", "Connection check error:") + " " + e.getMessage());
-            connectToDatabase();
-        }
+        List<Delivery> deliveries = fetcher.fetchDeliveries(player.getName());
+        if (deliveries.isEmpty()) return;
 
-        if (connection == null) {
-            logDelivery("❌ " + lang.getOrDefault("delivery-failed", "Could not deliver to") + " " + player.getName());
-            player.sendMessage("§c" + lang.getOrDefault("player-db-error", "Failed to check your deliveries due to a database error."));
+        ConfigurationSection products = getConfig().getConfigurationSection("products");
+        if (products == null) {
+            logDelivery("⚠ " + lang.getOrDefault("products-section-missing", "Section 'products' not found in config.yml."));
+            if (player.isOp()) {
+                player.sendMessage("§c" + lang.getOrDefault("products-section-missing", "Section 'products' not found in config.yml."));
+            }
             return;
         }
 
-        try {
-            PreparedStatement stmt = connection.prepareStatement(
-                    "SELECT id, item, amount FROM pending_deliveries WHERE player = ? AND delivered = 0");
-            stmt.setString(1, player.getName());
-            ResultSet rs = stmt.executeQuery();
+        Set<Integer> idsToMark = new HashSet<>();
 
-            boolean deliveredSomething = false;
-            ConfigurationSection products = getConfig().getConfigurationSection("products");
+        List<Delivery> toProcess = deliveries.stream()
+                .filter(d -> !recentlyDelivered.contains(d.getId()))
+                .collect(Collectors.toList());
 
-            if (products == null) {
-                logDelivery("⚠ " + lang.getOrDefault("products-section-missing", "Section 'products' not found in config.yml."));
+        for (Delivery d : toProcess) {
+            String productName = d.getItem().toLowerCase();
+
+            if (!products.contains(productName)) {
+                logDelivery("❌ " + lang.getOrDefault("product-not-configured", "Product not configured:") + " " + productName);
                 if (player.isOp()) {
-                    player.sendMessage("§c" + lang.getOrDefault("products-section-missing", "Section 'products' not found in config.yml."));
+                    player.sendMessage("§c" + lang.getOrDefault("product-not-configured-player", "Product") + " §e" + productName + "§c " + lang.getOrDefault("product-not-configured-player-2", "is not configured on this server."));
                 }
-                return;
+                continue;
             }
 
-            while (rs.next()) {
-                int id = rs.getInt("id");
-                String productName = rs.getString("item").toLowerCase();
-                int amount = rs.getInt("amount");
+            ConfigurationSection productConfig = products.getConfigurationSection(productName);
+            if (productConfig == null) continue;
 
-                if (!products.contains(productName)) {
-                    logDelivery("❌ " + lang.getOrDefault("product-not-configured", "Product not configured:") + " " + productName);
-                    if (player.isOp()) {
-                        player.sendMessage("§c" + lang.getOrDefault("product-not-configured-player", "Product") + " §e" + productName + "§c " + lang.getOrDefault("product-not-configured-player-2", "is not configured on this server."));
-                    }
-                    continue;
-                }
-
-                ConfigurationSection productConfig = products.getConfigurationSection(productName);
-                if (productConfig == null) continue;
+            try {
+                int amount = d.getAmount();
 
                 if (productConfig.contains("type")) {
                     String type = productConfig.getString("type");
@@ -149,14 +113,13 @@ public class WooStoreLink extends JavaPlugin implements Listener {
                         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
                     }
                 } else {
-                    // Support for multiple items or commands
                     if (productConfig.contains("items")) {
                         List<String> items = productConfig.getStringList("items");
-                        for (String entry : items) {
-                            String[] split = entry.split(" ");
+                        for (String entryLine : items) {
+                            String[] split = entryLine.split(" ");
                             String item = split[0];
                             int amt = (split.length > 1) ? Integer.parseInt(split[1]) : 1;
-                            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "give " + player.getName() + " " + item + " " + amt);
+                            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "give " + player.getName() + " " + item + " " + (amt * amount));
                         }
                     }
 
@@ -168,20 +131,26 @@ public class WooStoreLink extends JavaPlugin implements Listener {
                     }
                 }
 
-                PreparedStatement update = connection.prepareStatement("UPDATE pending_deliveries SET delivered = 1 WHERE id = ?");
-                update.setInt(1, id);
-                update.executeUpdate();
-
+                idsToMark.add(d.getId());
+                recentlyDelivered.add(d.getId()); // ⏱️ marcar como entregado temporalmente
                 logDelivery("✔ " + lang.getOrDefault("delivered", "Delivered to") + " " + player.getName() + ": " + productName + " x" + amount);
-                deliveredSomething = true;
-            }
 
-            if (deliveredSomething) {
-                player.sendMessage("§a" + lang.getOrDefault("player-delivered", "You have received your pending delivery from the store."));
+            } catch (Exception e) {
+                logDelivery("❌ Error delivering to " + player.getName() + ": " + e.getMessage());
             }
+        }
 
-        } catch (SQLException e) {
-            logDelivery("❌ " + lang.getOrDefault("delivery-error", "Delivery error for") + " " + player.getName() + ": " + e.getMessage());
+        if (!idsToMark.isEmpty()) {
+            fetcher.markAsDelivered(new ArrayList<>(idsToMark));
+        }
+
+        // ⌛ Limpiar los IDs tras 10 segundos
+        Bukkit.getScheduler().runTaskLater(this, () -> {
+            idsToMark.forEach(recentlyDelivered::remove);
+        }, 200L); // 200 ticks = 10s
+
+        if (!idsToMark.isEmpty()) {
+            player.sendMessage("§a" + lang.getOrDefault("player-delivered", "You have received your pending delivery from the store."));
         }
     }
 
@@ -222,10 +191,6 @@ public class WooStoreLink extends JavaPlugin implements Listener {
                 }
             }
         }
-    }
-
-    public Connection getConnection() {
-        return connection;
     }
 
     public LanguageLoader getLang() {

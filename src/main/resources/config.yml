@@ -1,30 +1,41 @@
-# MySQL Database Settings
-mysql:
-  host: localhost
-  port: 3306
-  database: database-here
-  user: user-here
-  password: password-here
+# ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+# ┃    WooStoreLink Settings    ┃
+# ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-# Language: en (default), es (Spanish)
+# Token generated in your WordPress admin (WooStoreLink settings page).
+api-token: "REPLACE_WITH_YOUR_API_TOKEN"
+
+# Your WordPress site URL (no trailing slash)
+api-domain: "https://yourdomain.com"
+
+# Language file to load (available: en, es)
 language: en
 
-# How long transaction logs should be kept (in days)
-log-file: deliveries.log
-log-retention-days: 30  # 1 month
-
-# How often to check for pending deliveries (in minutes)
+# Interval (in minutes) to automatically check for pending deliveries
 check-interval-minutes: 1
 
-# Products mapping: WooCommerce product name => Minecraft actions
-products:
-  test:
-    items:
-      - minecraft:dirt 5
-    commands:
-      - "say Thank you for your purchase, {player}!"
-      - "title {player} title {\"text\":\"Purchase Complete!\",\"color\":\"gold\"}"
+# Number of days to keep log files before auto-cleaning
+log-retention-days: 30
 
-  diamond:
+# Local log file name (inside /plugins/WooStoreLink/transaction-logs/)
+log-file: deliveries.log
+
+# ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+# ┃     Products Configuration     ┃
+# ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+# Map WooCommerce product names to in-game delivery actions.
+# Each product can execute item delivery and/or commands.
+
+products:
+  example_item:
+    items:
+      - "minecraft:diamond 3"
+      - "minecraft:gold_ingot 5"
     commands:
-      - "gamemode creative {player}"
+      - "say Thanks {player} for your order!"
+      - "title {player} title {\"text\":\"Thank you!\",\"color\":\"green\"}"
+
+  vip_rank:
+    commands:
+      - "lp user {player} parent add vip"
+      - "say {player} is now VIP!"

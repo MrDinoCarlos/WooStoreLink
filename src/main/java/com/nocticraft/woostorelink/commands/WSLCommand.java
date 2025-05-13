@@ -67,8 +67,12 @@ public class WSLCommand implements CommandExecutor {
                     sender.sendMessage("§cYou do not have permission to use this command.");
                     return true;
                 }
-                boolean connected = plugin.getConnection() != null;
-                sender.sendMessage("§eMySQL: " + (connected ? "§aConnected ✔" : "§cDisconnected ✘"));
+
+                String token = plugin.getConfig().getString("api-token");
+                String domain = plugin.getConfig().getString("api-domain");
+                boolean configured = token != null && !token.isEmpty() && domain != null && !domain.isEmpty();
+
+                sender.sendMessage("§eREST API: " + (configured ? "§aConfigured ✔" : "§cMissing config ✘"));
                 break;
 
             default:
@@ -91,6 +95,6 @@ public class WSLCommand implements CommandExecutor {
         if (sender.hasPermission("woostorelink.check.others"))
             sender.sendMessage("§e/wsl checkplayer <name> §7- Check deliveries for another player");
         if (sender.hasPermission("woostorelink.status"))
-            sender.sendMessage("§e/wsl status §7- Show MySQL connection status");
+            sender.sendMessage("§e/wsl status §7- Show REST API token & domain config status");
     }
 }
