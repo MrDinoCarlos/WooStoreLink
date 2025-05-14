@@ -26,6 +26,12 @@ public class WooStoreLink extends JavaPlugin implements Listener {
     // 🔒 Cache local para evitar entregas duplicadas antes de que el backend responda
     private final Set<Integer> recentlyDelivered = new HashSet<>();
 
+    private final LinkManager linkManager = new LinkManager();
+
+    public LinkManager getLinkManager() {
+        return linkManager;
+    }
+
     @Override
     public void onEnable() {
         saveDefaultConfig();
