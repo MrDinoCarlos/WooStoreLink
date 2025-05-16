@@ -61,34 +61,35 @@ public class DeliveryFetcher {
     public void markAsDelivered(List<Integer> deliveryIds) {
         if (deliveryIds.isEmpty()) return;
 
-        String endpoint = baseUrl + "/wp-json/minecraftstorelink/v1/mark-delivered";
-        try {
-            URL url = new URL(endpoint);
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("POST");
-            conn.setDoOutput(true);
-            conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+        for (int deliveryId : deliveryIds) {
+            try {
+                String endpoint = baseUrl + "/wp-json/minecraftstorelink/v1/mark-delivered";
+                HttpURLConnection conn = (HttpURLConnection) new URL(endpoint).openConnection();
+                conn.setRequestMethod("POST");
+                conn.setDoOutput(true);
+                conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
 
-            String ids = deliveryIds.stream().map(String::valueOf).collect(Collectors.joining(","));
-            String params = "token=" + URLEncoder.encode(token, "UTF-8") +
-                    "&ids=" + URLEncoder.encode(ids, "UTF-8");
+                String params = "token=" + URLEncoder.encode(token, "UTF-8") +
+                        "&id=" + URLEncoder.encode(String.valueOf(deliveryId), "UTF-8");
 
-            try (OutputStream os = conn.getOutputStream()) {
-                os.write(params.getBytes(StandardCharsets.UTF_8));
+                try (OutputStream os = conn.getOutputStream()) {
+                    os.write(params.getBytes(StandardCharsets.UTF_8));
+                }
+
+                int code = conn.getResponseCode();
+                if (code == 200) {
+                    plugin.getLogger().info("✔ Marked delivery " + deliveryId + " as delivered.");
+                } else {
+                    plugin.getLogger().warning("❌ Failed to mark delivery " + deliveryId + " (code " + code + ")");
+                    printErrorStream(conn);
+                }
+
+            } catch (Exception e) {
+                plugin.getLogger().severe("❌ Error marking delivery " + deliveryId + ": " + e.getMessage());
             }
-
-            int code = conn.getResponseCode();
-            if (code == 200) {
-                plugin.getLogger().info("✔ Marked deliveries as delivered: " + ids);
-            } else {
-                plugin.getLogger().warning("❌ Failed to mark deliveries as delivered (code " + code + ")");
-                printErrorStream(conn);
-            }
-
-        } catch (Exception e) {
-            plugin.getLogger().severe("❌ Error marking deliveries as delivered: " + e.getMessage());
         }
     }
+
 
     private void printErrorStream(HttpURLConnection conn) {
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getErrorStream()))) {
