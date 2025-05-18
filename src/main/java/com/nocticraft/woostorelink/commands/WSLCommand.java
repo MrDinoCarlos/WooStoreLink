@@ -70,11 +70,28 @@ public class WSLCommand implements CommandExecutor {
                     sender.sendMessage("§cYou do not have permission to use this command.");
                     return true;
                 }
-                String token = plugin.getConfig().getString("api-token");
+
+                String tokenCfg = plugin.getConfig().getString("api-token");
                 String domain = plugin.getConfig().getString("api-domain");
-                boolean configured = token != null && !token.isEmpty() && domain != null && !domain.isEmpty();
+                boolean configured = tokenCfg != null && !tokenCfg.isEmpty() && domain != null && !domain.isEmpty();
                 sender.sendMessage("§eREST API: " + (configured ? "§aConfigured ✔" : "§cMissing config ✘"));
-                break;
+
+                if (sender instanceof Player player) {
+                    String name = player.getName();
+                    long lastSync = plugin.getLinkManager().getLastSync(name);
+                    long nextSync = lastSync + 3600; // 1h después (puedes hacer esto dinámico si usas config)
+
+                    sender.sendMessage("§7🕓 Last Sync: §f" + (lastSync == 0 ? "Never" : formatTime(lastSync)));
+                    sender.sendMessage("§7⏰ Next Check: §f" + (lastSync == 0 ? "N/A" : formatTime(nextSync)));
+
+                    if (player.isOp()) {
+                        String token = plugin.getConfig().getString("api-token");
+                        sender.sendMessage("§7🔐 Token: §f" + (token != null ? token : "Not set"));
+                    }
+                }
+
+                return true;
+
 
             case "wp-link":
                 if (!(sender instanceof Player)) {
@@ -189,4 +206,10 @@ public class WSLCommand implements CommandExecutor {
             }
         });
     }
+    private String formatTime(long unix) {
+        java.time.Instant instant = java.time.Instant.ofEpochSecond(unix);
+        java.time.ZonedDateTime zdt = instant.atZone(java.time.ZoneId.systemDefault());
+        return java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(zdt);
+    }
 }
+

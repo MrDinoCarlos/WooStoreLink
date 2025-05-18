@@ -1,7 +1,6 @@
 package com.nocticraft.woostorelink.utils;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -15,7 +14,8 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.stream.Collectors;
+import com.google.gson.JsonObject;
+
 
 public class DeliveryFetcher {
 
@@ -35,11 +35,15 @@ public class DeliveryFetcher {
 
     public List<Delivery> fetchDeliveries(String playerName) {
         try {
-            String fullUrl = baseUrl + "/wp-json/minecraftstorelink/v1/pending?token=" + token + "&player=" + URLEncoder.encode(playerName, "UTF-8");
+            String fullUrl = baseUrl + "/wp-json/minecraftstorelink/v1/pending?token=" + URLEncoder.encode(token, "UTF-8") +
+                    "&player=" + URLEncoder.encode(playerName, "UTF-8");
+
             HttpURLConnection conn = (HttpURLConnection) new URL(fullUrl).openConnection();
             conn.setRequestMethod("GET");
             conn.setConnectTimeout(5000);
             conn.setReadTimeout(5000);
+            // No Authorization header, token is in URL
+
 
             int code = conn.getResponseCode();
             if (code == 200) {
@@ -47,6 +51,7 @@ public class DeliveryFetcher {
                 JsonObject json = gson.fromJson(reader, JsonObject.class);
                 Type listType = new TypeToken<List<Delivery>>() {}.getType();
                 return gson.fromJson(json.get("deliveries"), listType);
+
             } else {
                 plugin.getLogger().warning("❌ Failed to fetch deliveries. HTTP Code: " + code);
                 printErrorStream(conn);
@@ -68,9 +73,10 @@ public class DeliveryFetcher {
                 conn.setRequestMethod("POST");
                 conn.setDoOutput(true);
                 conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-
+                // No Authorization header
                 String params = "token=" + URLEncoder.encode(token, "UTF-8") +
                         "&id=" + URLEncoder.encode(String.valueOf(deliveryId), "UTF-8");
+
 
                 try (OutputStream os = conn.getOutputStream()) {
                     os.write(params.getBytes(StandardCharsets.UTF_8));
@@ -89,7 +95,6 @@ public class DeliveryFetcher {
             }
         }
     }
-
 
     private void printErrorStream(HttpURLConnection conn) {
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getErrorStream()))) {

@@ -35,4 +35,16 @@ public class LinkManager {
     public boolean hasPending(String playerName) {
         return pendingLinks.containsKey(playerName.toLowerCase());
     }
+
+    //Guarda Ultimo Sync
+    private final Map<String, Long> lastSync = new HashMap<>();
+
+    public void setLastSync(String playerName, long timestamp) {
+        lastSync.put(playerName.toLowerCase(), timestamp);
+    }
+
+    public long getLastSync(String playerName) {
+        return lastSync.getOrDefault(playerName.toLowerCase(), 0L);
+    }
+
 }

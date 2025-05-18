@@ -157,6 +157,9 @@ public class WooStoreLink extends JavaPlugin implements Listener {
 
         if (!idsToMark.isEmpty()) {
             player.sendMessage("§a" + lang.getOrDefault("player-delivered", "You have received your pending delivery from the store."));
+            // 🕓 Registrar la hora del último sync exitoso
+            linkManager.setLastSync(player.getName(), System.currentTimeMillis() / 1000L);
+
         }
     }
 
