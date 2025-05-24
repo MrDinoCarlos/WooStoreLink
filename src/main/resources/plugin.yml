@@ -10,7 +10,7 @@ commands:
   wsl:
     description: WooStoreLink management command
     usage: /wsl [help|reload|check|checkplayer|status]
-    permission: woostorelink.admin
+    permission: ""
     permission-message: You do not have permission to use this command.
 
 permissions:
@@ -43,3 +43,12 @@ permissions:
   woostorelink.help:
     description: Allows /wsl help
     default: true
+
+  woostorelink.wp-link:
+    description: Allows /wsl wp-link
+    default: true
+
+  woostorelink.wp-verify:
+    description: Allows /wsl wp-verify
+    default: true
+

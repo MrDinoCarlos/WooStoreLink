@@ -98,6 +98,10 @@ public class WSLCommand implements CommandExecutor {
                     sender.sendMessage("§cOnly players can use this command.");
                     return true;
                 }
+                if (!sender.hasPermission("woostorelink.wp-link")) {
+                    sender.sendMessage("§cYou do not have permission to use this command.");
+                    return true;
+                }
                 if (args.length < 2) {
                     sender.sendMessage("§cUsage: /wsl wp-link <your-email>");
                     return true;
@@ -108,6 +112,10 @@ public class WSLCommand implements CommandExecutor {
             case "wp-verify":
                 if (!(sender instanceof Player)) {
                     sender.sendMessage("§cOnly players can use this command.");
+                    return true;
+                }
+                if (!sender.hasPermission("woostorelink.wp-verify")) {
+                    sender.sendMessage("§cYou do not have permission to use this command.");
                     return true;
                 }
                 if (args.length < 2) {
