@@ -35,7 +35,7 @@ public class DeliveryFetcher {
 
     public List<Delivery> fetchDeliveries(String playerName) {
         try {
-            String fullUrl = baseUrl + "/wp-json/minecraftstorelink/v1/pending?token=" + URLEncoder.encode(token, "UTF-8") +
+            String fullUrl = baseUrl + "/wp-json/storelinkformc/v1/pending?token=" + URLEncoder.encode(token, "UTF-8") +
                     "&player=" + URLEncoder.encode(playerName, "UTF-8");
 
             HttpURLConnection conn = (HttpURLConnection) new URL(fullUrl).openConnection();
@@ -68,7 +68,7 @@ public class DeliveryFetcher {
 
         for (int deliveryId : deliveryIds) {
             try {
-                String endpoint = baseUrl + "/wp-json/minecraftstorelink/v1/mark-delivered";
+                String endpoint = baseUrl + "/wp-json/storelinkformc/v1/mark-delivered";
                 HttpURLConnection conn = (HttpURLConnection) new URL(endpoint).openConnection();
                 conn.setRequestMethod("POST");
                 conn.setDoOutput(true);

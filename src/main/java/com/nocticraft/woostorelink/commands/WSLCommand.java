@@ -149,7 +149,7 @@ public class WSLCommand implements CommandExecutor {
 
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             try {
-                String apiUrl = plugin.getConfig().getString("api-domain") + "/wp-json/minecraftstorelink/v1/request-link";
+                String apiUrl = plugin.getConfig().getString("api-domain") + "/wp-json/storelinkformc/v1/request-link";
                 String payload = "email=" + URLEncoder.encode(email, "UTF-8") +
                         "&player=" + URLEncoder.encode(player.getName(), "UTF-8");
 
@@ -186,7 +186,7 @@ public class WSLCommand implements CommandExecutor {
 
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             try {
-                String apiUrl = plugin.getConfig().getString("api-domain") + "/wp-json/minecraftstorelink/v1/verify-link";
+                String apiUrl = plugin.getConfig().getString("api-domain") + "/wp-json/storelinkformc/v1/verify-link";
                 String payload = "email=" + URLEncoder.encode(email, "UTF-8") +
                         "&code=" + URLEncoder.encode(code, "UTF-8");
 

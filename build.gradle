@@ -5,7 +5,7 @@ plugins {
 }
 
 group = 'com.nocticraft'
-version = '1.20.1-0.7.4'
+version = '1.20.1-0.7.5'
 
 repositories {
     mavenCentral()
