@@ -150,8 +150,11 @@ public class WSLCommand implements CommandExecutor {
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             try {
                 String apiUrl = plugin.getConfig().getString("api-domain") + "/wp-json/storelinkformc/v1/request-link";
+                String token = plugin.getConfig().getString("api-token");
                 String payload = "email=" + URLEncoder.encode(email, "UTF-8") +
-                        "&player=" + URLEncoder.encode(player.getName(), "UTF-8");
+                        "&player=" + URLEncoder.encode(player.getName(), "UTF-8") +
+                        "&token=" + URLEncoder.encode(token, "UTF-8");
+
 
                 HttpURLConnection conn = (HttpURLConnection) new URL(apiUrl).openConnection();
                 conn.setRequestMethod("POST");
@@ -187,8 +190,11 @@ public class WSLCommand implements CommandExecutor {
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             try {
                 String apiUrl = plugin.getConfig().getString("api-domain") + "/wp-json/storelinkformc/v1/verify-link";
+                String token = plugin.getConfig().getString("api-token");
                 String payload = "email=" + URLEncoder.encode(email, "UTF-8") +
-                        "&code=" + URLEncoder.encode(code, "UTF-8");
+                        "&code=" + URLEncoder.encode(code, "UTF-8") +
+                        "&token=" + URLEncoder.encode(token, "UTF-8");
+
 
                 HttpURLConnection conn = (HttpURLConnection) new URL(apiUrl).openConnection();
                 conn.setRequestMethod("POST");

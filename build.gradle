@@ -5,7 +5,7 @@ plugins {
 }
 
 group = 'com.nocticraft'
-version = '1.20.1-0.7.5'
+version = '1.20.1-0.7.6'
 
 repositories {
     mavenCentral()
@@ -34,4 +34,13 @@ processResources {
 
 jar {
     destinationDirectory.set(file("build/jars"))
+}
+
+// 👇 Añade esto para corregir los símbolos extraños
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+tasks.withType(ProcessResources).configureEach {
+    filteringCharset = 'UTF-8'
 }
