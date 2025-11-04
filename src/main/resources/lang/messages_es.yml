@@ -43,3 +43,46 @@ messages:
   delivered: "Entregado a"
   delivery-error: "Error al entregar a"
   error-closing-connection: "Error al cerrar la conexión:"
+
+  # --- Logros ---
+  achievements-disabled: "&cLos logros están desactivados actualmente."
+  achievements-title: "&6&lLogros"
+  achievements-counter-name: "%counter%"
+  achievements-line: "&7- &e%title% &7(&f%count%&7) &8- %status%"
+  achievements-status-locked: "&cBloqueado"
+  achievements-status-unlocked: "&aDesbloqueado"
+  achievements-progress-self: "&aTienes &e%purchases% &a%counter%."
+  achievements-progress-other: "&a%player% tiene &e%purchases% &a%counter%."
+  achievement-unlocked-self: "&aHas desbloqueado &6%title%&a! &7(%count% %counter%)"
+  achievement-unlocked-broadcast: "&6%player% &aha desbloqueado &e%title% &7(%count% %counter%)"
+  achievement-reward-failed: "&cError al ejecutar la recompensa de &e%id%&c, revisa la consola."
+  cmd-usage-achievements: "&eUso: /wsl achievements [jugador]"
+  player-not-found: "&cJugador no encontrado."
+
+
+  # --- MENU ---
+  only-players: "<red>Solo jugadores.</red>"
+  menu-title-profile: "<gold><b>Perfil</b></gold> <gray>•</gray> %player%"
+  profile-linking: "<gold>Vinculación</gold>"
+  profile-purchases: "<gold>Compras</gold>"
+  profile-deliveries: "<gold>Entregas</gold>"
+  profile-achievements: "<gold>Logros</gold>"
+  inventory-full-queued: "<red>Inventario lleno.</red> <gray>Guardado en cola.</gray>"
+  player-delivered-count: "&aRecibiste %count% artículo(s) de la tienda".
+  player-queued-count: "&e%count% artículo(s) estaban en cola. &7Libere espacio o abra el menú &e/wsl &7→ Entregas para reclamar."
+  delivery-claimed: "&aHas reclamado con éxito tu entrega en cola: &e%item%&a."
+  queue-added-1: "&eTu inventario está lleno. &7El objeto se ha añadido a tu cola de entregas."
+  queue-added-2: "&7Libera espacio o abre &e/wsl menu &7→ Deliveries para reclamarlo."
+  queue-claim-success: "&aHas reclamado correctamente tu entrega en cola: &e%item%&a."
+  queue-claim-full: "&eTu inventario sigue lleno. &7Libera espacio y vuelve a intentarlo desde &e/wsl menu &7→ Deliveries."
+  deliveries-click-to-claim: "&e&oClick para reclamar"
+  menu-deliveries-title: "&6Entregas pendientes"
+  menu-back: "&6Atrás"
+  menu-back-lore: "&7Volver al perfil"
+  menu-exit: "&cSalir"
+  menu-exit-lore: "&7Cerrar"
+  menu-prev: "&6Prev"
+  menu-next: "&6Siguiente"
+
+
+

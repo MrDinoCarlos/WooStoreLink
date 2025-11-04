@@ -3,27 +3,17 @@ version: ${version}
 main: com.nocticraft.woostorelink.WooStoreLink
 api-version: 1.20
 author: MrDinoCarlos
-website: https://nocticraft.com
+website: https://mrdino.es
 discord: https://discord.gg/ddyfucfZpy
 
 commands:
   wsl:
     description: WooStoreLink management command
-    usage: /wsl [help|reload|check|checkplayer|status]
+    usage: /wsl [menu|help|reload|check|checkplayer|status|wp-link|wp-verify|achievements]
     permission: ""
     permission-message: You do not have permission to use this command.
 
 permissions:
-  woostorelink.admin:
-    description: Full access to WooStoreLink commands
-    default: op
-    children:
-      woostorelink.reload: true
-      woostorelink.check: true
-      woostorelink.check.others: true
-      woostorelink.status: true
-      woostorelink.help: true
-
   woostorelink.reload:
     description: Allows /wsl reload
     default: op
@@ -40,15 +30,18 @@ permissions:
     description: Allows /wsl status
     default: true
 
-  woostorelink.help:
-    description: Allows /wsl help
-    default: true
-
   woostorelink.wp-link:
-    description: Allows /wsl wp-link
+    description: Allows /wsl wp-link <email>
     default: true
 
   woostorelink.wp-verify:
-    description: Allows /wsl wp-verify
+    description: Allows /wsl wp-verify <code>
     default: true
 
+  woostorelink.achievements:
+    description: View your achievement progress.
+    default: true
+
+  woostorelink.achievements.others:
+    description: View achievement progress of other players.
+    default: op

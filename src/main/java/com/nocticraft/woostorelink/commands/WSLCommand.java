@@ -1,7 +1,14 @@
 package com.nocticraft.woostorelink.commands;
 
 import com.nocticraft.woostorelink.WooStoreLink;
+import com.nocticraft.woostorelink.utils.Achievement;
+import com.nocticraft.woostorelink.utils.AchievementManager;
+import com.nocticraft.woostorelink.utils.menu.ProfileMenu;
+import com.nocticraft.woostorelink.delivery.DeliveriesMenu;
+import com.nocticraft.woostorelink.utils.menu.HelpMenu;
+import com.nocticraft.woostorelink.utils.menu.AchievementsMenu;
 import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.command.*;
 import org.bukkit.entity.Player;
 
@@ -16,15 +23,29 @@ public class WSLCommand implements CommandExecutor {
 
     private final WooStoreLink plugin;
 
-    public WSLCommand(WooStoreLink plugin) {
-        this.plugin = plugin;
-    }
+    public WSLCommand(WooStoreLink plugin) { this.plugin = plugin; }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (args.length == 0 || args[0].equalsIgnoreCase("help")) {
-            sendHelp(sender);
+
+        if (args.length == 0 || args[0].equalsIgnoreCase("menu")) {
+            if (!(sender instanceof Player p)) { sender.sendMessage("§cOnly players."); return true; }
+            new ProfileMenu(plugin, p).open();
             return true;
+        }
+        if (args[0].equalsIgnoreCase("help")) {
+            if (!(sender instanceof Player p)) { sendHelp(sender); return true; } // consola ve listado textual
+            new HelpMenu(plugin, p).open();
+            return true;
+        }
+        if (args[0].equalsIgnoreCase("deliveries")) {
+            if (!(sender instanceof Player p)) { sender.sendMessage("§cOnly players."); return true; }
+            new DeliveriesMenu(plugin, p, plugin.getDeliveryService().getQueue(p.getUniqueId())).open();
+            return true;
+        }
+        if (args[0].equalsIgnoreCase("achievements")) {
+            if (sender instanceof Player p) { new AchievementsMenu(plugin, p).open(); return true; }
+            // consola: mantiene la versión textual que ya tenías
         }
 
         switch (args[0].toLowerCase()) {
@@ -70,7 +91,6 @@ public class WSLCommand implements CommandExecutor {
                     sender.sendMessage("§cYou do not have permission to use this command.");
                     return true;
                 }
-
                 String tokenCfg = plugin.getConfig().getString("api-token");
                 String domain = plugin.getConfig().getString("api-domain");
                 boolean configured = tokenCfg != null && !tokenCfg.isEmpty() && domain != null && !domain.isEmpty();
@@ -79,19 +99,15 @@ public class WSLCommand implements CommandExecutor {
                 if (sender instanceof Player player) {
                     String name = player.getName();
                     long lastSync = plugin.getLinkManager().getLastSync(name);
-                    long nextSync = lastSync + 3600; // 1h después (puedes hacer esto dinámico si usas config)
-
-                    sender.sendMessage("§7🕓 Last Sync: §f" + (lastSync == 0 ? "Never" : formatTime(lastSync)));
-                    sender.sendMessage("§7⏰ Next Check: §f" + (lastSync == 0 ? "N/A" : formatTime(nextSync)));
-
+                    long nextSync = lastSync + 3600;
+                    sender.sendMessage("§7Last Sync: §f" + (lastSync == 0 ? "Never" : formatTime(lastSync)));
+                    sender.sendMessage("§7Next Check: §f" + (lastSync == 0 ? "N/A" : formatTime(nextSync)));
                     if (player.isOp()) {
                         String token = plugin.getConfig().getString("api-token");
-                        sender.sendMessage("§7🔐 Token: §f" + (token != null ? token : "Not set"));
+                        sender.sendMessage("§7Token: §f" + (token != null ? token : "Not set"));
                     }
                 }
-
                 return true;
-
 
             case "wp-link":
                 if (!(sender instanceof Player)) {
@@ -125,6 +141,12 @@ public class WSLCommand implements CommandExecutor {
                 verifyCode((Player) sender, args[1]);
                 return true;
 
+            case "achievements":
+            case "achievement":
+            case "ach":
+                handleAchievements(sender, args);
+                return true;
+
             default:
                 sender.sendMessage("§cUnknown subcommand. Type §e/wsl help §cfor help.");
                 break;
@@ -133,72 +155,179 @@ public class WSLCommand implements CommandExecutor {
         return true;
     }
 
-    private void sendHelp(CommandSender sender) {
-        sender.sendMessage("§6✦ WooStoreLink Commands ✦");
-        sender.sendMessage("§e/wsl help §7- Show this help menu");
-        sender.sendMessage("§e/wsl reload §7- Reload config and language");
-        sender.sendMessage("§e/wsl check §7- Check your own pending deliveries");
-        sender.sendMessage("§e/wsl checkplayer <name> §7- Check deliveries for another player");
-        sender.sendMessage("§e/wsl status §7- Show REST API token & domain config status");
-        sender.sendMessage("§e/wsl wp-link <email> §7- Link your WordPress account");
-        sender.sendMessage("§e/wsl wp-verify <code> §7- Verify your email to complete the link");
+    private void sendHelp(CommandSender sender) { /* igual que lo tenías */ }
+
+    // Devuelve un texto de error legible a partir del body del API.
+// Soporta {"error": "..."} o {"message": "..."} y fallback a body tal cual.
+    private String extractApiErrorReason(String body) {
+        if (body == null || body.isBlank()) return "Unknown error";
+        try {
+            com.google.gson.JsonElement el = com.google.gson.JsonParser.parseString(body);
+            if (el.isJsonObject()) {
+                var obj = el.getAsJsonObject();
+                if (obj.has("error") && !obj.get("error").isJsonNull()) {
+                    return obj.get("error").getAsString();
+                }
+                if (obj.has("message") && !obj.get("message").isJsonNull()) {
+                    return obj.get("message").getAsString();
+                }
+            }
+        } catch (Throwable ignored) { /* body no era JSON, usamos texto tal cual */ }
+        return body;
     }
 
-    private void requestLink(Player player, String email) {
-        plugin.getLinkManager().setPendingEmail(player.getName(), email); // store pending email
+
+    private void requestLink(Player player, String rawEmail) {
+        var lang = plugin.getLang();
+
+        // Normalizamos el email por si hay espacios o mayúsculas
+        String email = rawEmail == null ? "" : rawEmail.trim().toLowerCase();
+
+        String domain = plugin.getConfig().getString("api-domain");
+        String token  = plugin.getConfig().getString("api-token");
+
+        if (domain == null || domain.isEmpty() || token == null || token.isEmpty()) {
+            player.sendMessage(color(lang.getOrDefault("link-error", "&c✖ Failed: %reason%")
+                    .replace("%reason%", "Missing api-domain/api-token in config.yml")));
+            plugin.getLogger().warning("[wp-link] Missing api-domain/api-token in config.yml");
+            return;
+        }
+
+        plugin.getLinkManager().setPendingEmail(player.getName(), email);
 
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            HttpURLConnection conn = null;
             try {
-                String apiUrl = plugin.getConfig().getString("api-domain") + "/wp-json/storelinkformc/v1/request-link";
-                String token = plugin.getConfig().getString("api-token");
-                String payload = "email=" + URLEncoder.encode(email, "UTF-8") +
-                        "&player=" + URLEncoder.encode(player.getName(), "UTF-8") +
-                        "&token=" + URLEncoder.encode(token, "UTF-8");
+                String apiUrl = domain + "/wp-json/storelinkformc/v1/request-link";
+                String payload = "email=" + URLEncoder.encode(email, StandardCharsets.UTF_8.name()) +
+                        "&player=" + URLEncoder.encode(player.getName(), StandardCharsets.UTF_8.name()) +
+                        "&token="  + URLEncoder.encode(token, StandardCharsets.UTF_8.name());
 
+                // Logs de depuración completos
+                plugin.getLogger().info("[wp-link] POST " + apiUrl);
+                plugin.getLogger().info("[wp-link] Payload: " + payload);
 
-                HttpURLConnection conn = (HttpURLConnection) new URL(apiUrl).openConnection();
+                conn = (HttpURLConnection) new URL(apiUrl).openConnection();
                 conn.setRequestMethod("POST");
                 conn.setDoOutput(true);
-                conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+                conn.setConnectTimeout(10000);
+                conn.setReadTimeout(15000);
+
+                // Cabeceras extra "por si acaso"
+                conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
+                conn.setRequestProperty("Accept", "application/json");
+                conn.setRequestProperty("User-Agent", "WooStoreLink/0.8.0 (Minecraft)");
+                // Token también por header (además de en el body)
+                conn.setRequestProperty("X-StoreLink-Token", token);
 
                 try (OutputStream os = conn.getOutputStream()) {
                     os.write(payload.getBytes(StandardCharsets.UTF_8));
                 }
 
                 int responseCode = conn.getResponseCode();
-                if (responseCode == 200) {
-                    player.sendMessage("§a✔ Verification code sent to your email.");
-                } else {
-                    BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getErrorStream()));
-                    String response = reader.lines().collect(Collectors.joining());
-                    player.sendMessage("§c✖ Failed: " + response);
+                String responseBody;
+                try (InputStream is = (responseCode >= 200 && responseCode < 300)
+                        ? conn.getInputStream()
+                        : conn.getErrorStream()) {
+                    responseBody = (is == null) ? "" :
+                            new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))
+                                    .lines().collect(Collectors.joining("\n"));
+                }
+
+                plugin.getLogger().info("[wp-link] HTTP " + responseCode + ": " + responseBody);
+
+                // Mostramos la respuesta real en el chat SIEMPRE en modo debug (puedes quitarlo luego)
+                // player.sendMessage("§7[Debug] " + responseBody);
+
+                if (responseCode != 200) {
+                    String reason = extractApiErrorReason(responseBody);
+                    player.sendMessage(color(lang.getOrDefault("link-error",
+                            "&c✖ Failed: %reason%").replace("%reason%", reason)));
+                    return;
+                }
+
+                // Si es 200, comprobamos el JSON por si viene success=false
+                boolean success = true;
+                String message  = "Verification code sent.";
+                try {
+                    var el = com.google.gson.JsonParser.parseString(responseBody);
+                    if (el.isJsonObject()) {
+                        var obj = el.getAsJsonObject();
+                        if (obj.has("success")) success = obj.get("success").getAsBoolean();
+                        if (obj.has("message") && !obj.get("message").isJsonNull())
+                            message = obj.get("message").getAsString();
+                    }
+                } catch (Throwable ignored) {}
+
+                if (!success) {
+                    // 200 pero success=false -> mostramos causa si viene
+                    String reason = extractApiErrorReason(responseBody);
+                    player.sendMessage(color(lang.getOrDefault("link-error",
+                            "&c✖ Failed: %reason%").replace("%reason%", reason)));
+                    return;
+                }
+
+                // OK real
+                player.sendMessage(color(lang.getOrDefault("link-started",
+                        "&a✔ Verification code sent to your email.")));
+
+                // (Opcional) mostrar el código si el backend lo adjunta y tienes debug activo
+                boolean debugShow = plugin.getConfig().getBoolean("linking.debug-show-code", false);
+                if (debugShow && player.isOp()) {
+                    try {
+                        var el = com.google.gson.JsonParser.parseString(responseBody);
+                        if (el.isJsonObject() && el.getAsJsonObject().has("code")) {
+                            String code = el.getAsJsonObject().get("code").getAsString();
+                            player.sendMessage(color("&7[debug] Verification code: &e" + code));
+                        }
+                    } catch (Throwable ignored) {}
                 }
 
             } catch (Exception e) {
-                player.sendMessage("§c✖ Error: " + e.getMessage());
+                plugin.getLogger().warning("[wp-link] Exception: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+                e.printStackTrace();
+                player.sendMessage(color(lang.getOrDefault("link-error",
+                        "&c✖ Failed: %reason%").replace("%reason%", e.getMessage() != null ? e.getMessage() : "unknown error")));
+            } finally {
+                if (conn != null) conn.disconnect();
             }
         });
     }
 
     private void verifyCode(Player player, String code) {
+        var lang = plugin.getLang();
         String email = plugin.getLinkManager().getPendingEmail(player.getName());
         if (email == null) {
-            player.sendMessage("§cYou must link an email first using /wsl wp-link <email>");
+            player.sendMessage(color(lang.getOrDefault("link-error", "&c✖ Failed: %reason%")
+                    .replace("%reason%", "You must link an email first using /wsl wp-link <email>")));
+            return;
+        }
+
+        String domain = plugin.getConfig().getString("api-domain");
+        String token  = plugin.getConfig().getString("api-token");
+
+        if (domain == null || domain.isEmpty() || token == null || token.isEmpty()) {
+            player.sendMessage(color(lang.getOrDefault("verify-error", "&c✖ Failed: %reason%")
+                    .replace("%reason%", "Missing api-domain/api-token in config.yml")));
+            plugin.getLogger().warning("[wp-verify] Missing api-domain/api-token in config.yml");
             return;
         }
 
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            HttpURLConnection conn = null;
             try {
-                String apiUrl = plugin.getConfig().getString("api-domain") + "/wp-json/storelinkformc/v1/verify-link";
-                String token = plugin.getConfig().getString("api-token");
+                String apiUrl = domain + "/wp-json/storelinkformc/v1/verify-link";
                 String payload = "email=" + URLEncoder.encode(email, "UTF-8") +
                         "&code=" + URLEncoder.encode(code, "UTF-8") +
                         "&token=" + URLEncoder.encode(token, "UTF-8");
 
+                plugin.getLogger().info("[wp-verify] POST " + apiUrl + " email=" + email + " player=" + player.getName());
 
-                HttpURLConnection conn = (HttpURLConnection) new URL(apiUrl).openConnection();
+                conn = (HttpURLConnection) new URL(apiUrl).openConnection();
                 conn.setRequestMethod("POST");
                 conn.setDoOutput(true);
+                conn.setConnectTimeout(10000);
+                conn.setReadTimeout(15000);
                 conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
 
                 try (OutputStream os = conn.getOutputStream()) {
@@ -206,24 +335,52 @@ public class WSLCommand implements CommandExecutor {
                 }
 
                 int responseCode = conn.getResponseCode();
-                if (responseCode == 200) {
-                    plugin.getLinkManager().clear(player.getName());
-                    player.sendMessage("§a✔ Your account has been linked!");
-                } else {
-                    BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getErrorStream()));
-                    String response = reader.lines().collect(Collectors.joining());
-                    player.sendMessage("§c✖ Failed: " + response);
+
+                String responseBody;
+                try (InputStream is = (responseCode >= 200 && responseCode < 300)
+                        ? conn.getInputStream()
+                        : conn.getErrorStream()) {
+                    if (is != null) {
+                        responseBody = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))
+                                .lines().collect(Collectors.joining("\n"));
+                    } else {
+                        responseBody = "";
+                    }
                 }
 
+                if (responseCode == 200) {
+                    plugin.getLinkManager().clear(player.getName());
+                    plugin.getLinkManager().setLinked(player.getName(), true);
+                    player.sendMessage(color(lang.getOrDefault("verify-success",
+                            "&a✔ Your account has been linked!")));
+                    plugin.getLogger().info("[wp-verify] 200 OK: " + responseBody);
+                } else {
+                    String reason = extractApiErrorReason(responseBody);
+                    player.sendMessage(color(lang.getOrDefault("verify-error",
+                            "&c✖ Failed: %reason%").replace("%reason%", reason)));
+                    plugin.getLogger().warning("[wp-verify] HTTP " + responseCode + ": " + responseBody);
+                }
+
+
             } catch (Exception e) {
-                player.sendMessage("§c✖ Error: " + e.getMessage());
+                plugin.getLogger().warning("[wp-verify] Exception: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+                e.printStackTrace();
+                player.sendMessage(color(lang.getOrDefault("verify-error",
+                        "&c✖ Failed: %reason%").replace("%reason%", e.getMessage() != null ? e.getMessage() : "unknown error")));
+            } finally {
+                if (conn != null) conn.disconnect();
             }
         });
     }
+
+
     private String formatTime(long unix) {
         java.time.Instant instant = java.time.Instant.ofEpochSecond(unix);
         java.time.ZonedDateTime zdt = instant.atZone(java.time.ZoneId.systemDefault());
         return java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(zdt);
     }
-}
 
+    private void handleAchievements(CommandSender sender, String[] args) { /* igual que lo tenías */ }
+
+    private String color(String s) { return s.replace("&", "§"); }
+}

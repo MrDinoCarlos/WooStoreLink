@@ -42,3 +42,43 @@ messages:
   delivered: "Delivered to"
   delivery-error: "Delivery error for"
   error-closing-connection: "Error closing connection:"
+
+  # --- Achievements ---
+  achievements-disabled: "&cAchievements are currently disabled."
+  achievements-title: "&6&lAchievements"
+  achievements-counter-name: "%counter%"
+  achievements-line: "&7- &e%title% &7(&f%count%&7) &8- %status%"
+  achievements-status-locked: "&cLocked"
+  achievements-status-unlocked: "&aUnlocked"
+  achievements-progress-self: "&aYou have &e%purchases% &a%counter%."
+  achievements-progress-other: "&a%player% has &e%purchases% &a%counter%."
+  achievement-unlocked-self: "&aYou unlocked &6%title%&a! &7(%count% %counter%)"
+  achievement-unlocked-broadcast: "&6%player% &ahas unlocked &e%title% &7(%count% %counter%)"
+  achievement-reward-failed: "&cReward execution failed for &e%id%&c, check console."
+  cmd-usage-achievements: "&eUsage: /wsl achievements [player]"
+  player-not-found: "&cPlayer not found."
+
+  # --- MENU ---
+  only-players: "&cOnly players can use this command."
+  player-delivered-count: "&aYou received %count% item(s) from the store."
+  player-queued-count: "&e%count% item(s) were queued. &7Free up space, or open &e/wsl menu &7→ Deliveries to claim."
+  delivery-claimed: "&aYou have successfully claimed your queued delivery: &e%item%&a."
+  queue-added-1: "&eYour inventory is full. &7The item has been added to your delivery queue."
+  queue-added-2: "&7Please free up space or open &e/wsl menu &7→ Deliveries to claim it."
+  queue-claim-success: "&aYou have successfully claimed your queued delivery: &e%item%&a."
+  queue-claim-full: "&eYour inventory is still full. &7Free up space, then try again from &e/wsl menu &7→ Deliveries."
+  deliveries-click-to-claim: "&e&oClick to claim"
+  menu-deliveries-title: "&6Pending deliveries"
+  menu-back: "&6Back"
+  menu-back-lore: "&7Return to Profile"
+  menu-exit: "&cExit"
+  menu-exit-lore: "&7Close"
+  menu-prev: "&6Prev"
+  menu-next: "&6Next"
+
+
+
+
+
+
+

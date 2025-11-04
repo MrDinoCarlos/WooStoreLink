@@ -1,5 +1,6 @@
 # ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 # ┃    WooStoreLink Settings    ┃
+# ┃           v.0.8.0           ┃
 # ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
 # Token generated in your WordPress admin (WooStoreLink settings page).
@@ -25,9 +26,11 @@ log-file: deliveries.log
 # ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 # Map WooCommerce product names to in-game delivery actions.
 # Each product can execute item delivery and/or commands.
+# Please make sure product names are EXACTLY the same as in WooCommerce
+# CAPS Sensitive !!!
 
 products:
-  example_item:
+  "example_item":
     items:
       - "minecraft:diamond 3"
       - "minecraft:gold_ingot 5"
@@ -35,7 +38,55 @@ products:
       - "say Thanks {player} for your order!"
       - "title {player} title {\"text\":\"Thank you!\",\"color\":\"green\"}"
 
-  vip_rank:
+  "vip_rank":
     commands:
       - "lp user {player} parent add vip"
       - "say {player} is now VIP!"
+
+
+# --- Achievements configuration ---
+achievements:
+  enabled: true
+
+  # Display name used in messages for the counter (e.g., “Purchases”).
+  counter-name: "Purchases"
+
+  # List of achievements. They are evaluated when a player receives a delivery.
+  # Fields:
+  # - id: unique key (lowercase recommended)
+  # - count: required total purchases to unlock
+  # - title: shown in messages
+  # - description: optional text (not shown by default, reserved for future UI)
+  # - broadcast: if true, announce the unlock to the whole server
+  # - rewards.items: item rewards in "namespace:material amount" format
+  # - rewards.commands: console commands; {player} will be replaced with the player name
+  list:
+    - id: first_purchase
+      count: 1
+      title: "First Purchase"
+      description: "Make your first purchase."
+      broadcast: true
+      rewards:
+        items:
+          - "minecraft:diamond 1"
+        commands:
+          - "tellraw {player} {\"text\":\"Thanks for supporting the server!\",\"color\":\"gold\"}"
+
+    - id: bronze_buyer
+      count: 5
+      title: "Bronze Buyer"
+      description: "Reach 5 purchases."
+      broadcast: true
+      rewards:
+        items:
+          - "minecraft:emerald 5"
+
+    - id: silver_buyer
+      count: 10
+      title: "Silver Buyer"
+      description: "Reach 10 purchases."
+      broadcast: true
+      rewards:
+        commands:
+          - "lp user {player} parent addtemp vip 7d"
+          - "eco give {player} 10000"

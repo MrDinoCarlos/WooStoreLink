@@ -1,7 +1,9 @@
 package com.nocticraft.woostorelink;
 
 import com.nocticraft.woostorelink.commands.WSLCommand;
+import com.nocticraft.woostorelink.delivery.DeliveryService;
 import com.nocticraft.woostorelink.utils.*;
+import com.nocticraft.woostorelink.utils.menu.MenuRegistry;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
@@ -23,14 +25,21 @@ public class WooStoreLink extends JavaPlugin implements Listener {
     private String currentLangCode = "en";
     private DeliveryFetcher fetcher;
 
-    // 🔒 Cache local para evitar entregas duplicadas antes de que el backend responda
+    // Local cache to prevent duplicate deliveries while the backend is being updated
     private final Set<Integer> recentlyDelivered = new HashSet<>();
 
-    private final LinkManager linkManager = new LinkManager();
+    private final LinkManager linkManager = new LinkManager(this);
+    public LinkManager getLinkManager() { return linkManager; }
 
-    public LinkManager getLinkManager() {
-        return linkManager;
-    }
+    private AchievementManager achievementManager;
+    public AchievementManager getAchievementManager() { return achievementManager; }
+
+    private DeliveryService deliveryService;
+    public DeliveryService getDeliveryService() { return deliveryService; }
+
+    private final com.google.gson.Gson gson = new com.google.gson.Gson();
+    public com.google.gson.Gson getGson() { return gson; }
+
 
     @Override
     public void onEnable() {
@@ -40,7 +49,7 @@ public class WooStoreLink extends JavaPlugin implements Listener {
 
         fetcher = new DeliveryFetcher(this);
 
-        getLogger().info("🌐 Loaded language: " + currentLangCode + " | Example: " + lang.get("plugin-enabled"));
+        getLogger().info("Loaded language: " + currentLangCode + " | Example: " + lang.get("plugin-enabled"));
         Bukkit.getPluginManager().registerEvents(this, this);
         getCommand("wsl").setExecutor(new WSLCommand(this));
         StartupDisplay.show(this, lang);
@@ -49,11 +58,21 @@ public class WooStoreLink extends JavaPlugin implements Listener {
         long ticks = minutes * 60L * 20L;
 
         Bukkit.getScheduler().runTaskTimer(this, () -> {
-            logDelivery("⏰ " + lang.getOrDefault("auto-check", "Checking pending deliveries for online players..."));
+            logDelivery("[Auto] " + lang.getOrDefault("auto-check", "Checking pending deliveries for online players..."));
             for (Player player : Bukkit.getOnlinePlayers()) {
                 processPendingDeliveries(player);
             }
         }, 20L, ticks);
+
+        // Correct reference to the language loader
+        this.achievementManager = new AchievementManager(this, lang);
+
+        // Menu click listener
+        getServer().getPluginManager().registerEvents(new MenuRegistry(), this);
+
+        // Servicio de entregas (cola + reintentos periódicos)
+        this.deliveryService = new DeliveryService(this);
+
     }
 
     public void loadLanguage() {
@@ -70,7 +89,11 @@ public class WooStoreLink extends JavaPlugin implements Listener {
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         processPendingDeliveries(event.getPlayer());
+        if (deliveryService != null) {
+            deliveryService.tryDeliverPlayer(event.getPlayer());
+        }
     }
+
 
     public void processPendingDeliveries(Player player) {
         List<Delivery> deliveries = fetcher.fetchDeliveries(player.getName());
@@ -78,7 +101,7 @@ public class WooStoreLink extends JavaPlugin implements Listener {
 
         ConfigurationSection products = getConfig().getConfigurationSection("products");
         if (products == null) {
-            logDelivery("⚠ " + lang.getOrDefault("products-section-missing", "Section 'products' not found in config.yml."));
+            logDelivery("[Warn] " + lang.getOrDefault("products-section-missing", "Section 'products' not found in config.yml."));
             if (player.isOp()) {
                 player.sendMessage("§c" + lang.getOrDefault("products-section-missing", "Section 'products' not found in config.yml."));
             }
@@ -86,6 +109,9 @@ public class WooStoreLink extends JavaPlugin implements Listener {
         }
 
         Set<Integer> idsToMark = new HashSet<>();
+
+        int deliveredTotal = 0;
+        int queuedTotal = 0;
 
         List<Delivery> toProcess = deliveries.stream()
                 .filter(d -> !recentlyDelivered.contains(d.getId()))
@@ -95,9 +121,10 @@ public class WooStoreLink extends JavaPlugin implements Listener {
             String productName = d.getItem().toLowerCase();
 
             if (!products.contains(productName)) {
-                logDelivery("❌ " + lang.getOrDefault("product-not-configured", "Product not configured:") + " " + productName);
+                logDelivery("[Error] " + lang.getOrDefault("product-not-configured", "Product not configured:") + " " + productName);
                 if (player.isOp()) {
-                    player.sendMessage("§c" + lang.getOrDefault("product-not-configured-player", "Product") + " §e" + productName + "§c " + lang.getOrDefault("product-not-configured-player-2", "is not configured on this server."));
+                    player.sendMessage("§c" + lang.getOrDefault("product-not-configured-player", "Product") + " §e" + productName + "§c "
+                            + lang.getOrDefault("product-not-configured-player-2", "is not configured on this server."));
                 }
                 continue;
             }
@@ -108,60 +135,119 @@ public class WooStoreLink extends JavaPlugin implements Listener {
             try {
                 int amount = d.getAmount();
 
+                int deliveredCountThisDelivery = 0;
+                int queuedCountThisDelivery = 0;
+
                 if (productConfig.contains("type")) {
                     String type = productConfig.getString("type");
                     String value = productConfig.getString("value");
 
                     if ("item".equalsIgnoreCase(type)) {
-                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "give " + player.getName() + " " + value + " " + amount);
+                        org.bukkit.Material mat = org.bukkit.Material.matchMaterial(value);
+                        if (mat == null) {
+                            logDelivery("[Error] Unknown material: " + value);
+                        } else {
+                            org.bukkit.inventory.ItemStack is = new org.bukkit.inventory.ItemStack(mat, amount);
+                            if (getDeliveryService().tryDeliverNow(player, is)) deliveredCountThisDelivery++;
+                            else queuedCountThisDelivery++;
+                        }
+
                     } else if ("command".equalsIgnoreCase(type)) {
                         String command = value.replace("{player}", player.getName());
                         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
+
+                    } else {
+                        logDelivery("[Warn] Unknown product type: " + type + " (product: " + productName + ")");
                     }
+
                 } else {
                     if (productConfig.contains("items")) {
-                        List<String> items = productConfig.getStringList("items");
+                        java.util.List<String> items = productConfig.getStringList("items");
                         for (String entryLine : items) {
                             String[] split = entryLine.split(" ");
                             String item = split[0];
                             int amt = (split.length > 1) ? Integer.parseInt(split[1]) : 1;
-                            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "give " + player.getName() + " " + item + " " + (amt * amount));
+
+                            org.bukkit.Material mat = org.bukkit.Material.matchMaterial(item);
+                            if (mat == null) {
+                                logDelivery("[Error] Unknown material: " + item);
+                                continue;
+                            }
+                            org.bukkit.inventory.ItemStack is = new org.bukkit.inventory.ItemStack(mat, amt * amount);
+                            if (getDeliveryService().tryDeliverNow(player, is)) deliveredCountThisDelivery++;
+                            else queuedCountThisDelivery++;
                         }
                     }
-
                     if (productConfig.contains("commands")) {
-                        List<String> commands = productConfig.getStringList("commands");
+                        java.util.List<String> commands = productConfig.getStringList("commands");
                         for (String cmd : commands) {
                             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd.replace("{player}", player.getName()));
                         }
                     }
                 }
 
+                // Logros
+                if (achievementManager != null && achievementManager.isEnabled()) {
+                    achievementManager.addPurchaseAndCheck(player);
+                }
+
+                // ⚠️ CLAVE: marcar SIEMPRE como procesado (aunque haya ido a la cola)
                 idsToMark.add(d.getId());
-                recentlyDelivered.add(d.getId()); // ⏱️ marcar como entregado temporalmente
-                logDelivery("✔ " + lang.getOrDefault("delivered", "Delivered to") + " " + player.getName() + ": " + productName + " x" + amount);
+                recentlyDelivered.add(d.getId());
+
+                // Logs útiles
+                if (deliveredCountThisDelivery > 0)
+                    logDelivery("[OK] Delivered now to " + player.getName() + ": " + productName + " ×" + deliveredCountThisDelivery);
+                if (queuedCountThisDelivery > 0)
+                    logDelivery("[QUEUE] Queued for " + player.getName() + ": " + productName + " ×" + queuedCountThisDelivery +
+                            " (inventory full)");
+
+                // Acumular totales
+                deliveredTotal += deliveredCountThisDelivery;
+
+                // Si era sólo comando (no items ni queue), contamos como entregado "lógico"
+                if (deliveredCountThisDelivery == 0 && queuedCountThisDelivery == 0
+                        && productConfig.contains("type")
+                        && "command".equalsIgnoreCase(productConfig.getString("type"))) {
+                    deliveredTotal++;
+                }
+
+                queuedTotal += queuedCountThisDelivery;
+
 
             } catch (Exception e) {
-                logDelivery("❌ Error delivering to " + player.getName() + ": " + e.getMessage());
+                logDelivery("[Error] Delivering to " + player.getName() + ": " + e.getMessage());
             }
         }
 
+        // --- Notificar al backend ---
         if (!idsToMark.isEmpty()) {
             fetcher.markAsDelivered(new ArrayList<>(idsToMark));
         }
 
-        // ⌛ Limpiar los IDs tras 10 segundos
+        // --- Limpiar IDs locales en 10 segundos ---
         Bukkit.getScheduler().runTaskLater(this, () -> {
             idsToMark.forEach(recentlyDelivered::remove);
-        }, 200L); // 200 ticks = 10s
+        }, 200L);
 
-        if (!idsToMark.isEmpty()) {
-            player.sendMessage("§a" + lang.getOrDefault("player-delivered", "You have received your pending delivery from the store."));
-            // 🕓 Registrar la hora del último sync exitoso
-            linkManager.setLastSync(player.getName(), System.currentTimeMillis() / 1000L);
-
+        // --- Mensajes al jugador ---
+        if (deliveredTotal > 0) {
+            player.sendMessage(color(lang.getOrDefault("player-delivered-count",
+                    "You received %count% item(s) from the store.").replace("%count%", String.valueOf(deliveredTotal))));
         }
+        if (queuedTotal > 0) {
+            player.sendMessage(color(lang.getOrDefault("player-queued-count",
+                            "%count% item(s) were queued. Free up space, or open /wsl menu → Deliveries to claim.")
+                    .replace("%count%", String.valueOf(queuedTotal))));
+        }
+
+        // actualizar lastSync si hubo algo procesado
+        if (deliveredTotal > 0 || queuedTotal > 0) {
+            linkManager.setLastSync(player.getName(), System.currentTimeMillis() / 1000L);
+        }
+
     }
+
 
     public void logDelivery(String message) {
         String date = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
@@ -177,7 +263,7 @@ public class WooStoreLink extends JavaPlugin implements Listener {
                 fw.write("[" + time + "] " + message + "\n");
             }
         } catch (IOException e) {
-            getLogger().warning("❌ " + lang.getOrDefault("log-error", "Failed to write delivery log:") + " " + e.getMessage());
+            getLogger().warning("[Error] " + lang.getOrDefault("log-error", "Failed to write delivery log:") + " " + e.getMessage());
         }
     }
 
@@ -196,13 +282,14 @@ public class WooStoreLink extends JavaPlugin implements Listener {
         for (File file : files) {
             if (file.isFile() && file.getName().endsWith(".log") && file.lastModified() < cutoff) {
                 if (file.delete()) {
-                    getLogger().info("🗑️ " + lang.getOrDefault("log-deleted", "Old log removed:") + " " + file.getName());
+                    getLogger().info("[GC] " + lang.getOrDefault("log-deleted", "Old log removed:") + " " + file.getName());
                 }
             }
         }
     }
 
-    public LanguageLoader getLang() {
-        return lang;
+    public LanguageLoader getLang() { return lang; }
+    private String color(String s) {
+        return s.replace("&", "§");
     }
 }
