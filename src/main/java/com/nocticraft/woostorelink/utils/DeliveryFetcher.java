@@ -77,6 +77,10 @@ public class DeliveryFetcher {
                 conn.setDoOutput(true);
                 conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
 
+                // timeouts para evitar bloqueos largos
+                conn.setConnectTimeout(5000);
+                conn.setReadTimeout(5000);
+
                 String params = "token=" + URLEncoder.encode(token, "UTF-8") +
                         "&id=" + URLEncoder.encode(String.valueOf(deliveryId), "UTF-8");
 

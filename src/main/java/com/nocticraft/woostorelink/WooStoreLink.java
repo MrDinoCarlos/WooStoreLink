@@ -57,10 +57,11 @@ public class WooStoreLink extends JavaPlugin implements Listener {
         int minutes = getConfig().getInt("check-interval-minutes", 1);
         long ticks = minutes * 60L * 20L;
 
+        // Timer que ahora llama a una versión asíncrona internamente
         Bukkit.getScheduler().runTaskTimer(this, () -> {
             logDelivery("[Auto] " + lang.getOrDefault("auto-check", "Checking pending deliveries for online players..."));
             for (Player player : Bukkit.getOnlinePlayers()) {
-                processPendingDeliveries(player);
+                processPendingDeliveries(player); // ahora no bloquea el main thread
             }
         }, 20L, ticks);
 
@@ -88,16 +89,36 @@ public class WooStoreLink extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
-        processPendingDeliveries(event.getPlayer());
+        processPendingDeliveries(event.getPlayer()); // ahora async
         if (deliveryService != null) {
             deliveryService.tryDeliverPlayer(event.getPlayer());
         }
     }
 
-
+    /**
+     * NUEVA implementación: solo lanza la parte HTTP en async.
+     * Toda la lógica de dar ítems/comandos sigue en el main thread
+     * a través de processFetchedDeliveries(...).
+     */
     public void processPendingDeliveries(Player player) {
-        List<Delivery> deliveries = fetcher.fetchDeliveries(player.getName());
-        if (deliveries.isEmpty()) return;
+        Bukkit.getScheduler().runTaskAsynchronously(this, () -> {              // ASYNC HTTP
+            List<Delivery> deliveries = fetcher.fetchDeliveries(player.getName());
+            if (deliveries.isEmpty()) return;
+
+            // Volvemos al hilo principal para procesar las entregas
+            Bukkit.getScheduler().runTask(this, () ->                          // BACK TO MAIN
+                    processFetchedDeliveries(player, deliveries));
+        });
+    }
+
+    /**
+     * Lógica original de processPendingDeliveries, pero recibiendo
+     * la lista de deliveries ya obtenida desde el hilo asíncrono.
+     * Este metodo se ejecuta SIEMPRE en el main thread.
+     */
+    private void processFetchedDeliveries(Player player, List<Delivery> deliveries) {
+        // por si se desconecta entre el HTTP y el procesado
+        if (!player.isOnline()) return;
 
         ConfigurationSection products = getConfig().getConfigurationSection("products");
         if (products == null) {
@@ -191,7 +212,7 @@ public class WooStoreLink extends JavaPlugin implements Listener {
                     achievementManager.addPurchaseAndCheck(player);
                 }
 
-                // ⚠️ CLAVE: marcar SIEMPRE como procesado (aunque haya ido a la cola)
+                // Marcar siempre como procesado (aunque se haya encolado)
                 idsToMark.add(d.getId());
                 recentlyDelivered.add(d.getId());
 
@@ -214,15 +235,16 @@ public class WooStoreLink extends JavaPlugin implements Listener {
 
                 queuedTotal += queuedCountThisDelivery;
 
-
             } catch (Exception e) {
                 logDelivery("[Error] Delivering to " + player.getName() + ": " + e.getMessage());
             }
         }
 
-        // --- Notificar al backend ---
+        // --- Notificar al backend --- (ahora en async para no bloquear)
         if (!idsToMark.isEmpty()) {
-            fetcher.markAsDelivered(new ArrayList<>(idsToMark));
+            List<Integer> idsCopy = new ArrayList<>(idsToMark);
+            Bukkit.getScheduler().runTaskAsynchronously(this, () ->           // ASYNC markAsDelivered
+                    fetcher.markAsDelivered(idsCopy));
         }
 
         // --- Limpiar IDs locales en 10 segundos ---
@@ -245,9 +267,7 @@ public class WooStoreLink extends JavaPlugin implements Listener {
         if (deliveredTotal > 0 || queuedTotal > 0) {
             linkManager.setLastSync(player.getName(), System.currentTimeMillis() / 1000L);
         }
-
     }
-
 
     public void logDelivery(String message) {
         String date = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
@@ -289,6 +309,7 @@ public class WooStoreLink extends JavaPlugin implements Listener {
     }
 
     public LanguageLoader getLang() { return lang; }
+
     private String color(String s) {
         return s.replace("&", "§");
     }
