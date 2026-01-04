@@ -2,51 +2,65 @@ package com.nocticraft.woostorelink.utils;
 
 public class Delivery {
 
-    private int id;
-    private int order_id;
+    // Coinciden EXACTO con la API
+    private String id;
     private String item;
-    private int amount;
-    private boolean delivered; // ✅ AÑADIDO
+    private String amount;
 
-    // Getters
+    // Campos opcionales (la API NO los manda)
+    private Integer order_id;
+    private Boolean delivered;
+
+    /* ===== GETTERS ===== */
+
     public int getId() {
-        return id;
-    }
-
-    public int getOrderId() {
-        return order_id;
+        try {
+            return Integer.parseInt(id);
+        } catch (Exception e) {
+            return 0;
+        }
     }
 
     public String getItem() {
-        return item;
+        return item == null ? "" : item;
     }
 
     public int getAmount() {
-        return amount;
+        try {
+            return Integer.parseInt(amount);
+        } catch (Exception e) {
+            return 1;
+        }
     }
 
-    public boolean isDelivered() { // ✅ AÑADIDO
-        return delivered;
+    // Compatibilidad con código existente
+    public int getOrderId() {
+        return order_id == null ? 0 : order_id;
     }
 
-    // Setters
-    public void setId(int id) {
+    public boolean isDelivered() {
+        return delivered != null && delivered;
+    }
+
+    /* ===== SETTERS (opcionales, Gson no los necesita) ===== */
+
+    public void setId(String id) {
         this.id = id;
-    }
-
-    public void setOrderId(int order_id) {
-        this.order_id = order_id;
     }
 
     public void setItem(String item) {
         this.item = item;
     }
 
-    public void setAmount(int amount) {
+    public void setAmount(String amount) {
         this.amount = amount;
     }
 
-    public void setDelivered(boolean delivered) { // ✅ AÑADIDO
+    public void setOrderId(Integer order_id) {
+        this.order_id = order_id;
+    }
+
+    public void setDelivered(Boolean delivered) {
         this.delivered = delivered;
     }
 }

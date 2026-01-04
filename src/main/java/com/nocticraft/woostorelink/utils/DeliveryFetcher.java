@@ -1,6 +1,7 @@
 package com.nocticraft.woostorelink.utils;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -38,11 +39,11 @@ public class DeliveryFetcher {
     /** Fetches pending deliveries for a given player name. */
     public List<Delivery> fetchDeliveries(String playerName) {
         try {
-            String fullUrl = baseUrl + "/wp-json/storelinkformc/v1/pending?token=" +
-                    URLEncoder.encode(token, "UTF-8") +
+            String fullUrl = this.baseUrl + "/wp-json/storelinkformc/v1/pending?token=" +
+                    URLEncoder.encode(this.token, "UTF-8") +
                     "&player=" + URLEncoder.encode(playerName, "UTF-8");
 
-            HttpURLConnection conn = (HttpURLConnection) new URL(fullUrl).openConnection();
+            HttpURLConnection conn = (HttpURLConnection) (new URL(fullUrl)).openConnection();
             conn.setRequestMethod("GET");
             conn.setConnectTimeout(5000);
             conn.setReadTimeout(5000);
@@ -50,18 +51,45 @@ public class DeliveryFetcher {
             int code = conn.getResponseCode();
             if (code == 200) {
                 try (InputStreamReader reader = new InputStreamReader(conn.getInputStream())) {
-                    JsonObject json = gson.fromJson(reader, JsonObject.class);
+
                     Type listType = new TypeToken<List<Delivery>>() {}.getType();
-                    return gson.fromJson(json.get("deliveries"), listType);
+                    JsonElement root = this.gson.fromJson(reader, JsonElement.class);
+
+                    // Compatibilidad: si el backend devolviese directamente un array
+                    if (root != null && root.isJsonArray()) {
+                        return this.gson.fromJson(root, listType);
+                    }
+
+                    // Formato actual: { success: true, deliveries: [...] }
+                    if (root != null && root.isJsonObject()) {
+                        JsonObject json = root.getAsJsonObject();
+
+                        // Si existe success y es false, no proceses deliveries
+                        if (json.has("success") && !json.get("success").getAsBoolean()) {
+                            String msg = json.has("message") ? json.get("message").getAsString() : "Unknown error";
+                            this.plugin.getLogger().warning("[REST] API success=false: " + msg);
+                            return List.of();
+                        }
+
+                        JsonElement deliveriesElement = json.get("deliveries");
+                        if (deliveriesElement != null && deliveriesElement.isJsonArray()) {
+                            return this.gson.fromJson(deliveriesElement, listType);
+                        }
+
+                        return List.of();
+                    }
+
+                    return List.of();
                 }
-            } else {
-                plugin.getLogger().warning("[REST] Failed to fetch deliveries. HTTP " + code);
-                printErrorStream(conn);
             }
 
+            this.plugin.getLogger().warning("[REST] HTTP " + code);
+            this.printErrorStream(conn);
+
         } catch (Exception e) {
-            plugin.getLogger().severe("[REST] Error fetching deliveries: " + e.getMessage());
+            this.plugin.getLogger().severe("[REST] Error fetching deliveries: " + e.getMessage());
         }
+
         return List.of();
     }
 

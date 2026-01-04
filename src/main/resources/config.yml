@@ -1,12 +1,14 @@
 # ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 # ┃    WooStoreLink Settings    ┃
-# ┃           v.0.8.0           ┃
+# ┃           v.0.8.2           ┃
 # ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-# Token generated in your WordPress admin (WooStoreLink settings page).
+# Token generated in your WordPress admin (StoreLinkforMC settings page).
 api-token: "REPLACE_WITH_YOUR_API_TOKEN"
 
 # Your WordPress site URL (no trailing slash)
+# Include https://
+# You need to have a valid SSL Encryption on your site for it to work
 api-domain: "https://yourdomain.com"
 
 # Language file to load (available: en, es)
@@ -26,19 +28,20 @@ log-file: deliveries.log
 # ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 # Map WooCommerce product names to in-game delivery actions.
 # Each product can execute item delivery and/or commands.
-# Please make sure product names are EXACTLY the same as in WooCommerce
+# Please make sure product names are EXACTLY the same as in the Deliveries Page (However they have register)
 # CAPS Sensitive !!!
 
 products:
-  "example_item":
+  "test":
     items:
-      - "minecraft:diamond 3"
-      - "minecraft:gold_ingot 5"
+      - "minecraft:stick 1"
     commands:
       - "say Thanks {player} for your order!"
       - "title {player} title {\"text\":\"Thank you!\",\"color\":\"green\"}"
 
   "vip_rank":
+    items:
+      - "minecraft:gold_ingot 1"
     commands:
       - "lp user {player} parent add vip"
       - "say {player} is now VIP!"
