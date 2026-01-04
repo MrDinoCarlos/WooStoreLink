@@ -19,3 +19,4 @@ public class StartupDisplay {
         Bukkit.getConsoleSender().sendMessage("§9§m----------------------------------------------------");
     }
 }
+
