@@ -1,6 +1,6 @@
 # ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 # ┃    WooStoreLink Settings    ┃
-# ┃           v.0.8.0           ┃
+# ┃           v.0.9.0           ┃
 # ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
 # Token generated in your WordPress admin (WooStoreLink settings page).
@@ -24,16 +24,29 @@ log-file: deliveries.log
 # ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 # ┃     Products Configuration     ┃
 # ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
-# Map WooCommerce product names to in-game delivery actions.
+# Map WooCommerce product names or IDs to in-game delivery actions.
 # Each product can execute item delivery and/or commands.
-# Please make sure product names are EXACTLY the same as in WooCommerce
-# CAPS Sensitive !!!
+# For product variations, using the WooCommerce variation ID is recommended.
+# Accepted ID formats include "id:123", "variation:123", "product:123", "wc:123", or "123".
+# Product names are still supported for backwards compatibility.
 
 products:
+  # Recommended for WooCommerce variations:
+  # "product - variation":
+  #   commands:
+  #     - "lp user {player} parent addtemp vip 30d"
+
   "example_item":
     items:
       - "minecraft:diamond 3"
       - "minecraft:gold_ingot 5"
+    commands:
+      - "say Thanks {player} for your order!"
+      - "title {player} title {\"text\":\"Thank you!\",\"color\":\"green\"}"
+
+  "example_item - variation":
+    items:
+      - "minecraft:stick 3"
     commands:
       - "say Thanks {player} for your order!"
       - "title {player} title {\"text\":\"Thank you!\",\"color\":\"green\"}"

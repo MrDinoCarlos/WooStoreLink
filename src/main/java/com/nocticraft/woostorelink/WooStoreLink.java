@@ -18,8 +18,12 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class WooStoreLink extends JavaPlugin implements Listener {
+
+    private static final Pattern WC_ID_PATTERN = Pattern.compile("(?i)(?:^|[\\s(#\\[])(?:id|product|product_id|variation|variation_id)\\s*[:#-]?\\s*(\\d+)(?:\\D|$)");
 
     private LanguageLoader lang;
     private String currentLangCode = "en";
@@ -139,18 +143,19 @@ public class WooStoreLink extends JavaPlugin implements Listener {
                 .collect(Collectors.toList());
 
         for (Delivery d : toProcess) {
-            String productName = d.getItem().toLowerCase();
+            String productKey = resolveProductConfigKey(d, products);
 
-            if (!products.contains(productName)) {
-                logDelivery("[Error] " + lang.getOrDefault("product-not-configured", "Product not configured:") + " " + productName);
+            if (productKey == null) {
+                String deliveryItem = d.getItem() == null ? "" : d.getItem();
+                logDelivery("[Error] " + lang.getOrDefault("product-not-configured", "Product not configured:") + " " + deliveryItem);
                 if (player.isOp()) {
-                    player.sendMessage("§c" + lang.getOrDefault("product-not-configured-player", "Product") + " §e" + productName + "§c "
+                    player.sendMessage("§c" + lang.getOrDefault("product-not-configured-player", "Product") + " §e" + deliveryItem + "§c "
                             + lang.getOrDefault("product-not-configured-player-2", "is not configured on this server."));
                 }
                 continue;
             }
 
-            ConfigurationSection productConfig = products.getConfigurationSection(productName);
+            ConfigurationSection productConfig = products.getConfigurationSection(productKey);
             if (productConfig == null) continue;
 
             try {
@@ -178,7 +183,7 @@ public class WooStoreLink extends JavaPlugin implements Listener {
                         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
 
                     } else {
-                        logDelivery("[Warn] Unknown product type: " + type + " (product: " + productName + ")");
+                        logDelivery("[Warn] Unknown product type: " + type + " (product: " + productKey + ")");
                     }
 
                 } else {
@@ -218,9 +223,9 @@ public class WooStoreLink extends JavaPlugin implements Listener {
 
                 // Logs útiles
                 if (deliveredCountThisDelivery > 0)
-                    logDelivery("[OK] Delivered now to " + player.getName() + ": " + productName + " ×" + deliveredCountThisDelivery);
+                    logDelivery("[OK] Delivered now to " + player.getName() + ": " + productKey + " ×" + deliveredCountThisDelivery);
                 if (queuedCountThisDelivery > 0)
-                    logDelivery("[QUEUE] Queued for " + player.getName() + ": " + productName + " ×" + queuedCountThisDelivery +
+                    logDelivery("[QUEUE] Queued for " + player.getName() + ": " + productKey + " ×" + queuedCountThisDelivery +
                             " (inventory full)");
 
                 // Acumular totales
@@ -266,6 +271,68 @@ public class WooStoreLink extends JavaPlugin implements Listener {
         // actualizar lastSync si hubo algo procesado
         if (deliveredTotal > 0 || queuedTotal > 0) {
             linkManager.setLastSync(player.getName(), System.currentTimeMillis() / 1000L);
+        }
+    }
+
+    private String resolveProductConfigKey(Delivery delivery, ConfigurationSection products) {
+        if (delivery == null || products == null) return null;
+
+        List<String> candidates = new ArrayList<>();
+        addIdCandidates(candidates, delivery.getVariationId(), true);
+        addIdCandidates(candidates, delivery.getProductId(), false);
+
+        String rawItem = delivery.getItem();
+        if (rawItem != null) {
+            String item = rawItem.trim();
+            if (!item.isEmpty()) {
+                candidates.add(item);
+                candidates.add(item.toLowerCase(Locale.ROOT));
+
+                Integer parsedId = extractWooCommerceId(item);
+                if (parsedId != null) {
+                    addIdCandidates(candidates, parsedId, true);
+                    addIdCandidates(candidates, parsedId, false);
+                }
+            }
+        }
+
+        Set<String> seen = new LinkedHashSet<>(candidates);
+        for (String candidate : seen) {
+            if (products.contains(candidate)) return candidate;
+        }
+
+        Map<String, String> lowerCaseKeys = new HashMap<>();
+        for (String key : products.getKeys(false)) {
+            lowerCaseKeys.put(key.toLowerCase(Locale.ROOT), key);
+        }
+        for (String candidate : seen) {
+            String matchedKey = lowerCaseKeys.get(candidate.toLowerCase(Locale.ROOT));
+            if (matchedKey != null) return matchedKey;
+        }
+
+        return null;
+    }
+
+    private void addIdCandidates(List<String> candidates, int id, boolean variation) {
+        if (id <= 0) return;
+
+        String value = String.valueOf(id);
+        candidates.add(value);
+        candidates.add("id:" + value);
+        candidates.add("wc:" + value);
+        candidates.add((variation ? "variation:" : "product:") + value);
+    }
+
+    private Integer extractWooCommerceId(String item) {
+        Matcher matcher = WC_ID_PATTERN.matcher(item);
+        if (!matcher.find()) {
+            return item.matches("\\d+") ? Integer.parseInt(item) : null;
+        }
+
+        try {
+            return Integer.parseInt(matcher.group(1));
+        } catch (NumberFormatException ignored) {
+            return null;
         }
     }
 

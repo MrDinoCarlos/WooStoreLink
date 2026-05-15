@@ -5,6 +5,8 @@ public class Delivery {
     private int id;
     private int order_id;
     private String item;
+    private int product_id;
+    private int variation_id;
     private int amount;
     private boolean delivered; // ✅ AÑADIDO
 
@@ -19,6 +21,14 @@ public class Delivery {
 
     public String getItem() {
         return item;
+    }
+
+    public int getProductId() {
+        return product_id;
+    }
+
+    public int getVariationId() {
+        return variation_id;
     }
 
     public int getAmount() {
@@ -40,6 +50,14 @@ public class Delivery {
 
     public void setItem(String item) {
         this.item = item;
+    }
+
+    public void setProductId(int product_id) {
+        this.product_id = product_id;
+    }
+
+    public void setVariationId(int variation_id) {
+        this.variation_id = variation_id;
     }
 
     public void setAmount(int amount) {
