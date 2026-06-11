@@ -1,33 +1,52 @@
+language-version: "1.0.0"
 prefix: "[WooStoreLink]"
 
 messages:
-  # General
-  usage: "Usage: /deliveries <reload|check|check-now|log <player>>"
+  # Startup and console
+  plugin-enabled: "WooStoreLink enabled successfully."
+  startup-ready: "WooStoreLink is ready to receive WooCommerce orders."
+
+  # General command feedback
+  usage: "Usage: /wsl <menu|help|reload|check|checkplayer|status|wp-link|wp-verify|achievements>"
   no-permission: "You do not have permission to use this command."
+  permission-player: "&cYou do not have permission or must be a player."
   player-only: "This command can only be used by players."
-  player-delivered: "You have received your pending delivery from the store."
+  only-players: "&cOnly players can use this command."
+  unknown-subcommand: "&cUnknown subcommand. Type &e/wsl help &cfor help."
+  player-not-found: "&cPlayer not found."
 
-  # Reload
-  reloaded: "WooStoreLink reloaded successfully."
-
-  # Check
+  # Reload and delivery checks
+  reloaded: "&aConfiguration and language reloaded."
+  checked-self: "&aChecked your pending deliveries."
+  checked-other: "&aChecked deliveries for %player%."
+  usage-checkplayer: "&cUsage: /wsl checkplayer <player>"
+  forced-check: "Forced delivery check executed."
   pending-item: "Pending:"
   no-pending: "You have no pending deliveries."
   error-checking: "Error checking your deliveries."
 
-  # Check-now
-  forced-check: "Forced delivery check executed."
+  # Status command
+  status-rest-api: "&eREST API: %status%"
+  status-configured: "&aConfigured"
+  status-missing-config: "&cMissing config"
+  status-last-sync: "&7Last Sync: &f%time%"
+  status-next-check: "&7Next Check: &f%time%"
+  status-never: "Never"
+  status-na: "N/A"
+  status-token: "&7Token: &f%token%"
+  status-not-set: "Not set"
+  usage-wp-link: "&cUsage: /wsl wp-link <your-email>"
+  usage-wp-verify: "&cUsage: /wsl wp-verify <code>"
 
-  # Log
-  log-usage: "Usage: /deliveries log <player>"
+  # Logs
+  log-usage: "Usage: /wsl log <player>"
   logs-for: "Delivery log for"
   log-folder-missing: "Log folder not found."
   log-read-error: "Failed to read log file:"
   log-deleted: "Old log removed:"
+  log-error: "Failed to write delivery log:"
 
-  # Console and logs
-  startup-ready: "WSL is ready to receive WooCommerce orders."
-  plugin-enabled: "WooStoreLink successfully enabled."
+  # Delivery processing and backend errors
   auto-check: "Checking pending deliveries for online players..."
   db-connected: "MySQL connection established."
   db-error: "MySQL connection error:"
@@ -43,7 +62,23 @@ messages:
   delivery-error: "Delivery error for"
   error-closing-connection: "Error closing connection:"
 
-  # --- Achievements ---
+  # Player deliveries and queue
+  player-delivered: "You have received your pending delivery from the store."
+  player-delivered-count: "&aYou received %count% item(s) from the store."
+  player-queued-count: "&e%count% item(s) were queued. &7Free up space or open &e/wsl menu &7> Deliveries to claim."
+  delivery-claimed: "&aYou have successfully claimed your queued delivery: &e%item%&a."
+  queue-added-1: "&eYour inventory is full. &7The item has been added to your delivery queue."
+  queue-added-2: "&7Free up space or open &e/wsl menu &7> Deliveries to claim it."
+  queue-claim-success: "&aYou have successfully claimed your queued delivery: &e%item%&a."
+  queue-claim-full: "&eYour inventory is still full. &7Free up space, then try again from &e/wsl menu &7> Deliveries."
+
+  # WordPress account linking
+  link-started: "&aVerification code sent to your email."
+  link-error: "&cFailed: %reason%"
+  verify-success: "&aYour account has been linked."
+  verify-error: "&cFailed: %reason%"
+
+  # Achievements
   achievements-disabled: "&cAchievements are currently disabled."
   achievements-title: "&6&lAchievements"
   achievements-counter-name: "%counter%"
@@ -55,18 +90,33 @@ messages:
   achievement-unlocked-self: "&aYou unlocked &6%title%&a! &7(%count% %counter%)"
   achievement-unlocked-broadcast: "&6%player% &ahas unlocked &e%title% &7(%count% %counter%)"
   achievement-reward-failed: "&cReward execution failed for &e%id%&c, check console."
+  achievement-menu-requirement: "&7Requirement: &f%count% %counter%"
+  achievement-menu-progress: "&7Progress: &f%current%/%count% %bar%"
+  achievement-menu-unlocked: "&aUnlocked!"
+  achievement-menu-missing: "&cMissing: &f%count%"
   cmd-usage-achievements: "&eUsage: /wsl achievements [player]"
-  player-not-found: "&cPlayer not found."
 
-  # --- MENU ---
-  only-players: "&cOnly players can use this command."
-  player-delivered-count: "&aYou received %count% item(s) from the store."
-  player-queued-count: "&e%count% item(s) were queued. &7Free up space, or open &e/wsl menu &7→ Deliveries to claim."
-  delivery-claimed: "&aYou have successfully claimed your queued delivery: &e%item%&a."
-  queue-added-1: "&eYour inventory is full. &7The item has been added to your delivery queue."
-  queue-added-2: "&7Please free up space or open &e/wsl menu &7→ Deliveries to claim it."
-  queue-claim-success: "&aYou have successfully claimed your queued delivery: &e%item%&a."
-  queue-claim-full: "&eYour inventory is still full. &7Free up space, then try again from &e/wsl menu &7→ Deliveries."
+  # Profile menu
+  menu-title-profile: "&6&lProfile &7- &f%player%"
+  menu-profile-linking-name: "&6Linking"
+  menu-profile-linking-lore-1: "&7Server: %server%"
+  menu-profile-linking-lore-server-enabled: "&aenabled"
+  menu-profile-linking-lore-server-disabled: "&cdisabled"
+  menu-profile-linking-lore-2: "&7Your status: %status%"
+  menu-profile-linking-status-linked: "&alinked"
+  menu-profile-linking-status-notlinked: "&cnot linked"
+  menu-profile-linking-lore-3: "&e&oClick for instructions"
+  menu-profile-deliveries-name: "&6Deliveries"
+  menu-profile-deliveries-lore-1: "&7Pending: &f%count%"
+  menu-profile-deliveries-lore-2: "&e&oClick to open"
+  menu-profile-achievements-name: "&6Achievements"
+  menu-profile-achievements-lore-1: "&7Unlocked: &f%unlocked%/%total%"
+  menu-profile-achievements-lore-2: "&e&oClick to open"
+  menu-profile-help-name: "&6Help"
+  menu-profile-help-lore: "&7View all commands and info"
+  inventory-full-queued: "&cInventory full. &7Saved to queue."
+
+  # Deliveries menu and shared navigation
   deliveries-click-to-claim: "&e&oClick to claim"
   menu-deliveries-title: "&6Pending deliveries"
   menu-back: "&6Back"
@@ -76,9 +126,13 @@ messages:
   menu-prev: "&6Prev"
   menu-next: "&6Next"
 
-
-
-
-
-
-
+  # Help menu
+  menu-help-title: "&6Help"
+  menu-help-commands: "&eCommands"
+  menu-help-line-menu: "&e/wsl menu &7- Open profile"
+  menu-help-line-deliveries: "&e/wsl deliveries &7- Pending deliveries"
+  menu-help-line-achievements: "&e/wsl achievements &7- Your achievements"
+  menu-help-line-check: "&e/wsl check &7- Check pending from store"
+  menu-help-line-status: "&e/wsl status &7- Status info"
+  menu-help-line-link: "&e/wsl wp-link <email> &7- Link account"
+  menu-help-line-verify: "&e/wsl wp-verify <code> &7- Verify link"

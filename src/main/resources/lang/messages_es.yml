@@ -1,51 +1,85 @@
+language-version: "1.0.0"
 prefix: "[WooStoreLink]"
 
 messages:
+  # Inicio y consola
   plugin-enabled: "WooStoreLink activado correctamente."
-  # General
-  usage: "Uso: /deliveries <reload|check|check-now|log <player>>"
+  startup-ready: "WooStoreLink esta listo para recibir pedidos de WooCommerce."
+
+  # Respuestas generales de comandos
+  usage: "Uso: /wsl <menu|help|reload|check|checkplayer|status|wp-link|wp-verify|achievements>"
   no-permission: "No tienes permiso para usar este comando."
+  permission-player: "&cNo tienes permiso o debes ser un jugador."
   player-only: "Este comando solo puede ser usado por jugadores."
-  player-delivered: "Has recibido tu entrega pendiente de la tienda."
+  only-players: "&cSolo los jugadores pueden usar este comando."
+  unknown-subcommand: "&cSubcomando desconocido. Usa &e/wsl help &cpara ver la ayuda."
+  player-not-found: "&cJugador no encontrado."
 
-
-  # Reload
-  reloaded: "WooStoreLink recargado con éxito."
-
-  # Check
+  # Recarga y comprobacion de entregas
+  reloaded: "&aConfiguracion e idioma recargados."
+  checked-self: "&aSe han comprobado tus entregas pendientes."
+  checked-other: "&aSe han comprobado las entregas de %player%."
+  usage-checkplayer: "&cUso: /wsl checkplayer <jugador>"
+  forced-check: "Revision forzada de entregas ejecutada."
   pending-item: "Pendiente:"
   no-pending: "No tienes entregas pendientes."
   error-checking: "Error al consultar tus entregas."
 
-  # Check-now
-  forced-check: "Revisión forzada de entregas ejecutada."
+  # Comando de estado
+  status-rest-api: "&eAPI REST: %status%"
+  status-configured: "&aConfigurada"
+  status-missing-config: "&cFalta configuracion"
+  status-last-sync: "&7Ultima sincronizacion: &f%time%"
+  status-next-check: "&7Siguiente comprobacion: &f%time%"
+  status-never: "Nunca"
+  status-na: "N/D"
+  status-token: "&7Token: &f%token%"
+  status-not-set: "No configurado"
+  usage-wp-link: "&cUso: /wsl wp-link <tu-email>"
+  usage-wp-verify: "&cUso: /wsl wp-verify <codigo>"
 
-  # Log
-  log-usage: "Uso: /deliveries log <player>"
+  # Logs
+  log-usage: "Uso: /wsl log <jugador>"
   logs-for: "Historial de entregas de"
   log-folder-missing: "Carpeta de logs no encontrada."
   log-read-error: "Error al leer el archivo de log:"
   log-deleted: "Log antiguo eliminado:"
+  log-error: "Error al escribir el log de entregas:"
 
-  # Console and logs
-  startup-ready: "WSL estáa listo para recibir pedidos de WooCommerce."
+  # Procesado de entregas y errores del backend
   auto-check: "Comprobando entregas pendientes para jugadores conectados..."
-  db-connected: "Conexión MySQL establecida."
-  db-error: "Error de conexión MySQL:"
+  db-connected: "Conexion MySQL establecida."
+  db-error: "Error de conexion MySQL:"
   reconnecting-db: "Reconectando a MySQL..."
-  connection-check-error: "Error al verificar la conexión:"
+  connection-check-error: "Error al verificar la conexion:"
   delivery-failed: "No se pudo entregar a"
-  player-db-error: "No se pudo comprobar tus entregas por un error de conexión."
-  products-section-missing: "Sección 'products' no encontrada en config.yml."
+  player-db-error: "No se pudieron comprobar tus entregas por un error de base de datos."
+  products-section-missing: "No se encontro la seccion 'products' en config.yml."
   product-not-configured: "Producto no configurado:"
   product-not-configured-player: "El producto"
-  product-not-configured-player-2: "no está configurado en este servidor."
+  product-not-configured-player-2: "no esta configurado en este servidor."
   delivered: "Entregado a"
   delivery-error: "Error al entregar a"
-  error-closing-connection: "Error al cerrar la conexión:"
+  error-closing-connection: "Error al cerrar la conexion:"
 
-  # --- Logros ---
-  achievements-disabled: "&cLos logros están desactivados actualmente."
+  # Entregas del jugador y cola
+  player-delivered: "Has recibido tu entrega pendiente de la tienda."
+  player-delivered-count: "&aHas recibido %count% articulo(s) de la tienda."
+  player-queued-count: "&e%count% articulo(s) se han guardado en cola. &7Libera espacio o abre &e/wsl menu &7> Entregas para reclamarlos."
+  delivery-claimed: "&aHas reclamado correctamente tu entrega en cola: &e%item%&a."
+  queue-added-1: "&eTu inventario esta lleno. &7El objeto se ha anadido a tu cola de entregas."
+  queue-added-2: "&7Libera espacio o abre &e/wsl menu &7> Entregas para reclamarlo."
+  queue-claim-success: "&aHas reclamado correctamente tu entrega en cola: &e%item%&a."
+  queue-claim-full: "&eTu inventario sigue lleno. &7Libera espacio y vuelve a intentarlo desde &e/wsl menu &7> Entregas."
+
+  # Vinculacion con WordPress
+  link-started: "&aSe ha enviado un codigo de verificacion a tu email."
+  link-error: "&cError: %reason%"
+  verify-success: "&aTu cuenta se ha vinculado correctamente."
+  verify-error: "&cError: %reason%"
+
+  # Logros
+  achievements-disabled: "&cLos logros estan desactivados actualmente."
   achievements-title: "&6&lLogros"
   achievements-counter-name: "%counter%"
   achievements-line: "&7- &e%title% &7(&f%count%&7) &8- %status%"
@@ -56,33 +90,49 @@ messages:
   achievement-unlocked-self: "&aHas desbloqueado &6%title%&a! &7(%count% %counter%)"
   achievement-unlocked-broadcast: "&6%player% &aha desbloqueado &e%title% &7(%count% %counter%)"
   achievement-reward-failed: "&cError al ejecutar la recompensa de &e%id%&c, revisa la consola."
+  achievement-menu-requirement: "&7Requisito: &f%count% %counter%"
+  achievement-menu-progress: "&7Progreso: &f%current%/%count% %bar%"
+  achievement-menu-unlocked: "&aDesbloqueado!"
+  achievement-menu-missing: "&cFaltan: &f%count%"
   cmd-usage-achievements: "&eUso: /wsl achievements [jugador]"
-  player-not-found: "&cJugador no encontrado."
 
+  # Menu de perfil
+  menu-title-profile: "&6&lPerfil &7- &f%player%"
+  menu-profile-linking-name: "&6Vinculacion"
+  menu-profile-linking-lore-1: "&7Servidor: %server%"
+  menu-profile-linking-lore-server-enabled: "&aactivada"
+  menu-profile-linking-lore-server-disabled: "&cdesactivada"
+  menu-profile-linking-lore-2: "&7Tu estado: %status%"
+  menu-profile-linking-status-linked: "&avinculado"
+  menu-profile-linking-status-notlinked: "&cno vinculado"
+  menu-profile-linking-lore-3: "&e&oClick para ver instrucciones"
+  menu-profile-deliveries-name: "&6Entregas"
+  menu-profile-deliveries-lore-1: "&7Pendientes: &f%count%"
+  menu-profile-deliveries-lore-2: "&e&oClick para abrir"
+  menu-profile-achievements-name: "&6Logros"
+  menu-profile-achievements-lore-1: "&7Desbloqueados: &f%unlocked%/%total%"
+  menu-profile-achievements-lore-2: "&e&oClick para abrir"
+  menu-profile-help-name: "&6Ayuda"
+  menu-profile-help-lore: "&7Ver comandos e informacion"
+  inventory-full-queued: "&cInventario lleno. &7Guardado en cola."
 
-  # --- MENU ---
-  only-players: "<red>Solo jugadores.</red>"
-  menu-title-profile: "<gold><b>Perfil</b></gold> <gray>•</gray> %player%"
-  profile-linking: "<gold>Vinculación</gold>"
-  profile-purchases: "<gold>Compras</gold>"
-  profile-deliveries: "<gold>Entregas</gold>"
-  profile-achievements: "<gold>Logros</gold>"
-  inventory-full-queued: "<red>Inventario lleno.</red> <gray>Guardado en cola.</gray>"
-  player-delivered-count: "&aRecibiste %count% artículo(s) de la tienda".
-  player-queued-count: "&e%count% artículo(s) estaban en cola. &7Libere espacio o abra el menú &e/wsl &7→ Entregas para reclamar."
-  delivery-claimed: "&aHas reclamado con éxito tu entrega en cola: &e%item%&a."
-  queue-added-1: "&eTu inventario está lleno. &7El objeto se ha añadido a tu cola de entregas."
-  queue-added-2: "&7Libera espacio o abre &e/wsl menu &7→ Deliveries para reclamarlo."
-  queue-claim-success: "&aHas reclamado correctamente tu entrega en cola: &e%item%&a."
-  queue-claim-full: "&eTu inventario sigue lleno. &7Libera espacio y vuelve a intentarlo desde &e/wsl menu &7→ Deliveries."
+  # Menu de entregas y navegacion compartida
   deliveries-click-to-claim: "&e&oClick para reclamar"
   menu-deliveries-title: "&6Entregas pendientes"
-  menu-back: "&6Atrás"
+  menu-back: "&6Atras"
   menu-back-lore: "&7Volver al perfil"
   menu-exit: "&cSalir"
   menu-exit-lore: "&7Cerrar"
-  menu-prev: "&6Prev"
+  menu-prev: "&6Anterior"
   menu-next: "&6Siguiente"
 
-
-
+  # Menu de ayuda
+  menu-help-title: "&6Ayuda"
+  menu-help-commands: "&eComandos"
+  menu-help-line-menu: "&e/wsl menu &7- Abrir perfil"
+  menu-help-line-deliveries: "&e/wsl deliveries &7- Entregas pendientes"
+  menu-help-line-achievements: "&e/wsl achievements &7- Tus logros"
+  menu-help-line-check: "&e/wsl check &7- Comprobar entregas de la tienda"
+  menu-help-line-status: "&e/wsl status &7- Informacion de estado"
+  menu-help-line-link: "&e/wsl wp-link <email> &7- Vincular cuenta"
+  menu-help-line-verify: "&e/wsl wp-verify <codigo> &7- Verificar vinculacion"

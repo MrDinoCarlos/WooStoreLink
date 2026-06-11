@@ -48,6 +48,9 @@ public class WooStoreLink extends JavaPlugin implements Listener {
     @Override
     public void onEnable() {
         saveDefaultConfig();
+        ResourceUpdater.updateConfig(this);
+        reloadConfig();
+        ResourceUpdater.updateLanguages(this, "en", "es", "fr", "de");
         loadLanguage();
         cleanOldLogs();
 

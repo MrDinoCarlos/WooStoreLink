@@ -16,21 +16,28 @@ public class HelpMenu extends Menu {
         this.rows = 1;
     }
 
-    @Override public String title() { return "§6Help"; }
+    @Override public String title() {
+        return color(plugin.getLang().getOrDefault("menu-help-title", "&6Help"));
+    }
 
     @Override public void draw() {
         inv.clear();
-        inv.setItem(0, ItemBuilder.icon(Material.ARROW, "§6Back", List.of("§7Return to Profile")));
-        inv.setItem(8, ItemBuilder.icon(Material.BARRIER, "§cExit", List.of("§7Close")));
-        inv.setItem(4, ItemBuilder.icon(Material.BOOK, "§eCommands",
+        inv.setItem(0, ItemBuilder.icon(Material.ARROW,
+                color(plugin.getLang().getOrDefault("menu-back", "&6Back")),
+                List.of(color(plugin.getLang().getOrDefault("menu-back-lore", "&7Return to Profile")))));
+        inv.setItem(8, ItemBuilder.icon(Material.BARRIER,
+                color(plugin.getLang().getOrDefault("menu-exit", "&cExit")),
+                List.of(color(plugin.getLang().getOrDefault("menu-exit-lore", "&7Close")))));
+        inv.setItem(4, ItemBuilder.icon(Material.BOOK,
+                color(plugin.getLang().getOrDefault("menu-help-commands", "&eCommands")),
                 List.of(
-                        "§e/wsl menu §7- Open profile",
-                        "§e/wsl deliveries §7- Pending deliveries",
-                        "§e/wsl achievements §7- Your achievements",
-                        "§e/wsl check §7- Check pending from store",
-                        "§e/wsl status §7- Status info",
-                        "§e/wsl wp-link <email> §7- Link account",
-                        "§e/wsl wp-verify <code> §7- Verify link"
+                        color(plugin.getLang().getOrDefault("menu-help-line-menu", "&e/wsl menu &7- Open profile")),
+                        color(plugin.getLang().getOrDefault("menu-help-line-deliveries", "&e/wsl deliveries &7- Pending deliveries")),
+                        color(plugin.getLang().getOrDefault("menu-help-line-achievements", "&e/wsl achievements &7- Your achievements")),
+                        color(plugin.getLang().getOrDefault("menu-help-line-check", "&e/wsl check &7- Check pending from store")),
+                        color(plugin.getLang().getOrDefault("menu-help-line-status", "&e/wsl status &7- Status info")),
+                        color(plugin.getLang().getOrDefault("menu-help-line-link", "&e/wsl wp-link <email> &7- Link account")),
+                        color(plugin.getLang().getOrDefault("menu-help-line-verify", "&e/wsl wp-verify <code> &7- Verify link"))
                 )));
     }
 
@@ -39,4 +46,5 @@ public class HelpMenu extends Menu {
         if (e.getSlot()==0) { new ProfileMenu(plugin, viewer).open(); return; }
         if (e.getSlot()==8) { viewer.closeInventory(); }
     }
+
 }

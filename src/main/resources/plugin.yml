@@ -2,6 +2,7 @@ name: WooStoreLink
 version: ${version}
 main: com.nocticraft.woostorelink.WooStoreLink
 api-version: 1.20
+description: WooCommerce delivery bridge for Minecraft 1.20.x, 1.21.x and 1.26.x.
 author: MrDinoCarlos
 website: https://mrdino.es
 discord: https://discord.gg/ddyfucfZpy

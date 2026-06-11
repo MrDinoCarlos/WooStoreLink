@@ -21,12 +21,18 @@ public class AchievementsMenu extends Menu {
         this.all = plugin.getAchievementManager() != null ? plugin.getAchievementManager().getAll() : java.util.List.of();
     }
 
-    @Override public String title() { return "§6Achievements"; }
+    @Override public String title() {
+        return color(plugin.getLang().getOrDefault("achievements-title", "&6Achievements"));
+    }
 
     @Override public void draw() {
         inv.clear();
-        inv.setItem(0, ItemBuilder.icon(Material.ARROW, "§6Back", List.of("§7Return to Profile")));
-        inv.setItem(8, ItemBuilder.icon(Material.BARRIER, "§cExit", List.of("§7Close")));
+        inv.setItem(0, ItemBuilder.icon(Material.ARROW,
+                color(plugin.getLang().getOrDefault("menu-back", "&6Back")),
+                List.of(color(plugin.getLang().getOrDefault("menu-back-lore", "&7Return to Profile")))));
+        inv.setItem(8, ItemBuilder.icon(Material.BARRIER,
+                color(plugin.getLang().getOrDefault("menu-exit", "&cExit")),
+                List.of(color(plugin.getLang().getOrDefault("menu-exit-lore", "&7Close")))));
 
         int start = page * 28;
         int purchases = 0;
@@ -43,14 +49,24 @@ public class AchievementsMenu extends Menu {
                     icon.getType(),
                     (unlocked ? "§a" : "§c") + a.getTitle(),
                     List.of(
-                            "§7Requirement: §f" + a.getCount() + " " + plugin.getAchievementManager().getCounterName(),
-                            "§7Progress: §f" + purchases + "/" + a.getCount() + " " + bar,
-                            unlocked ? "§aUnlocked!" : "§cMissing: §f" + need
+                            color(plugin.getLang().getOrDefault("achievement-menu-requirement", "&7Requirement: &f%count% %counter%")
+                                    .replace("%count%", String.valueOf(a.getCount()))
+                                    .replace("%counter%", plugin.getAchievementManager().getCounterName())),
+                            color(plugin.getLang().getOrDefault("achievement-menu-progress", "&7Progress: &f%current%/%count% %bar%")
+                                    .replace("%current%", String.valueOf(purchases))
+                                    .replace("%count%", String.valueOf(a.getCount()))
+                                    .replace("%bar%", bar)),
+                            color((unlocked
+                                    ? plugin.getLang().getOrDefault("achievement-menu-unlocked", "&aUnlocked!")
+                                    : plugin.getLang().getOrDefault("achievement-menu-missing", "&cMissing: &f%count%")
+                                    .replace("%count%", String.valueOf(need))))
                     )));
         }
 
-        inv.setItem(45, ItemBuilder.icon(Material.ARROW, "§6Prev", List.of()));
-        inv.setItem(53, ItemBuilder.icon(Material.ARROW, "§6Next", List.of()));
+        inv.setItem(45, ItemBuilder.icon(Material.ARROW,
+                color(plugin.getLang().getOrDefault("menu-prev", "&6Prev")), List.of()));
+        inv.setItem(53, ItemBuilder.icon(Material.ARROW,
+                color(plugin.getLang().getOrDefault("menu-next", "&6Next")), List.of()));
     }
 
     private String progressBar(int done, int all) {

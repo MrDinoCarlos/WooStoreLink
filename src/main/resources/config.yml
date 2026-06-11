@@ -1,34 +1,43 @@
-# ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-# ┃    WooStoreLink Settings    ┃
-# ┃           v.0.9.0           ┃
-# ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+# ============================================================================ #
+#                              WooStoreLink                                    #
+#                       Release 1.0 - Configuration                            #
+# ============================================================================ #
+# Versioned configuration file. Keep config-version unchanged so WooStoreLink
+# can add new options on future updates without overwriting your settings.
+#
+# Compatibility: Minecraft 1.20.x, 1.21.x and 1.26.x
+# Author: MrDinoCarlos
+# Website: https://mrdino.es
+# ============================================================================ #
+
+config-version: "1.0.0"
 
 # Token generated in your WordPress admin (WooStoreLink settings page).
 api-token: "REPLACE_WITH_YOUR_API_TOKEN"
 
-# Your WordPress site URL (no trailing slash)
+# Your WordPress site URL (no trailing slash).
 api-domain: "https://yourdomain.com"
 
-# Language file to load (available: en, es)
+# Language file to load (available: en, es, fr, de).
 language: en
 
-# Interval (in minutes) to automatically check for pending deliveries
+# Interval (in minutes) to automatically check pending deliveries.
 check-interval-minutes: 1
 
-# Number of days to keep log files before auto-cleaning
+# Number of days to keep log files before auto-cleaning.
 log-retention-days: 30
 
-# Local log file name (inside /plugins/WooStoreLink/transaction-logs/)
+# Local log file name (inside /plugins/WooStoreLink/transaction-logs/).
 log-file: deliveries.log
 
-# ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-# ┃     Products Configuration     ┃
-# ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+# ============================================================================ #
+#                           Products Configuration                             #
+# ============================================================================ #
 # Map WooCommerce product names or IDs to in-game delivery actions.
 # Each product can execute item delivery and/or commands.
 # For product variations, using the WooCommerce variation ID is recommended.
-# Accepted ID formats include "id:123", "variation:123", "product:123", "wc:123", or "123".
-# Product names are still supported for backwards compatibility.
+# Accepted ID formats include "id:123", "variation:123", "product:123",
+# "wc:123", or "123". Product names are still supported for compatibility.
 
 products:
   # Recommended for WooCommerce variations:
@@ -56,23 +65,23 @@ products:
       - "lp user {player} parent add vip"
       - "say {player} is now VIP!"
 
-
-# --- Achievements configuration ---
+# ============================================================================ #
+#                              Achievements                                    #
+# ============================================================================ #
 achievements:
   enabled: true
 
-  # Display name used in messages for the counter (e.g., “Purchases”).
+  # Display name used in messages for the counter (for example, "Purchases").
   counter-name: "Purchases"
 
-  # List of achievements. They are evaluated when a player receives a delivery.
   # Fields:
   # - id: unique key (lowercase recommended)
   # - count: required total purchases to unlock
   # - title: shown in messages
-  # - description: optional text (not shown by default, reserved for future UI)
+  # - description: optional text, reserved for future UI
   # - broadcast: if true, announce the unlock to the whole server
   # - rewards.items: item rewards in "namespace:material amount" format
-  # - rewards.commands: console commands; {player} will be replaced with the player name
+  # - rewards.commands: console commands; {player} will be replaced
   list:
     - id: first_purchase
       count: 1

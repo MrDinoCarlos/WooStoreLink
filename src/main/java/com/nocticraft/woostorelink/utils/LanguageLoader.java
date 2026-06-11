@@ -28,24 +28,25 @@ public class LanguageLoader {
 
         if (!langFolder.exists()) langFolder.mkdirs();
 
+        String resourcePath = "lang/" + filename;
         if (!langFile.exists()) {
-            String resourcePath = "lang/" + filename;
-            if (plugin.getResource(resourcePath) != null) {
-                plugin.saveResource(resourcePath, false);
-                plugin.getLogger().info("✅ Language file copied: " + resourcePath);
-            } else {
-                plugin.getLogger().warning("⚠ Language file not found in JAR: " + resourcePath + ". Falling back to English.");
+            if (plugin.getResource(resourcePath) == null) {
+                plugin.getLogger().warning("Language file not found in JAR: " + resourcePath + ". Falling back to English.");
                 load("en");
                 return;
             }
+            plugin.saveResource(resourcePath, false);
+            plugin.getLogger().info("Language file copied: " + resourcePath);
         }
+
+        ResourceUpdater.updateLanguages(plugin, langCode);
 
         try {
             YamlConfiguration config = YamlConfiguration.loadConfiguration(langFile);
             ConfigurationSection section = config.getConfigurationSection("messages");
 
             if (section == null) {
-                plugin.getLogger().warning("⚠ 'messages:' section not found in " + filename);
+                plugin.getLogger().warning("'messages:' section not found in " + filename);
                 return;
             }
 
@@ -53,10 +54,10 @@ public class LanguageLoader {
                 messages.put(key, section.getString(key));
             }
 
-            plugin.getLogger().info("🌐 Loaded language: " + langCode + " | Example: " + getOrDefault("plugin-enabled", "[Missing key]"));
+            plugin.getLogger().info("Loaded language: " + langCode + " | Example: " + getOrDefault("plugin-enabled", "[Missing key]"));
 
         } catch (Exception e) {
-            plugin.getLogger().severe("❌ Failed to load language file: " + e.getMessage());
+            plugin.getLogger().severe("Failed to load language file: " + e.getMessage());
         }
     }
 

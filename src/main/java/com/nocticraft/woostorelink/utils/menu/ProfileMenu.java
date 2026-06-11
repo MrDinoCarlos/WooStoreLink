@@ -24,7 +24,10 @@ public class ProfileMenu extends Menu {
     }
 
     @Override
-    public String title() { return "§6§lProfile §7• §f" + viewer.getName(); }
+    public String title() {
+        return color(plugin.getLang().getOrDefault("menu-title-profile", "&6&lProfile &7- &f%player%")
+                .replace("%player%", viewer.getName()));
+    }
 
     @Override
     public void draw() {
@@ -65,8 +68,12 @@ public class ProfileMenu extends Menu {
                 ? plugin.getDeliveryService().countPending(viewer.getUniqueId()) : 0;
         inv.setItem(4, ItemBuilder.icon(
                 pending > 0 ? Material.CHEST_MINECART : Material.CHEST,
-                "§6Deliveries",
-                List.of("§7Pending: §f" + pending, "§e§oClick to open")));
+                color(plugin.getLang().getOrDefault("menu-profile-deliveries-name", "&6Deliveries")),
+                List.of(
+                        color(plugin.getLang().getOrDefault("menu-profile-deliveries-lore-1", "&7Pending: &f%count%")
+                                .replace("%count%", String.valueOf(pending))),
+                        color(plugin.getLang().getOrDefault("menu-profile-deliveries-lore-2", "&e&oClick to open"))
+                )));
 
         // 6: Logros (cálculo con getAll + isUnlocked)
         int unlocked = 0, total = 0;
@@ -78,16 +85,24 @@ public class ProfileMenu extends Menu {
                 for (Achievement a : all) if (am.isUnlocked(id, a.getId())) unlocked++;
             }
         } catch (Throwable ignored) {}
-        inv.setItem(6, ItemBuilder.icon(Material.NETHER_STAR, "§6Achievements",
-                List.of("§7Unlocked: §f" + unlocked + "/" + total, "§e§oClick to open")));
+        inv.setItem(6, ItemBuilder.icon(Material.NETHER_STAR,
+                color(plugin.getLang().getOrDefault("menu-profile-achievements-name", "&6Achievements")),
+                List.of(
+                        color(plugin.getLang().getOrDefault("menu-profile-achievements-lore-1", "&7Unlocked: &f%unlocked%/%total%")
+                                .replace("%unlocked%", String.valueOf(unlocked))
+                                .replace("%total%", String.valueOf(total))),
+                        color(plugin.getLang().getOrDefault("menu-profile-achievements-lore-2", "&e&oClick to open"))
+                )));
 
         // 7: Help
-        inv.setItem(7, ItemBuilder.icon(Material.BOOK, "§6Help",
-                List.of("§7View all commands and info")));
+        inv.setItem(7, ItemBuilder.icon(Material.BOOK,
+                color(plugin.getLang().getOrDefault("menu-profile-help-name", "&6Help")),
+                List.of(color(plugin.getLang().getOrDefault("menu-profile-help-lore", "&7View all commands and info")))));
 
         // 8: Exit
-        inv.setItem(8, ItemBuilder.icon(Material.BARRIER, "§cExit",
-                List.of("§7Close this menu")));
+        inv.setItem(8, ItemBuilder.icon(Material.BARRIER,
+                color(plugin.getLang().getOrDefault("menu-exit", "&cExit")),
+                List.of(color(plugin.getLang().getOrDefault("menu-exit-lore", "&7Close")))));
     }
 
     @Override

@@ -29,7 +29,7 @@ public class WSLCommand implements CommandExecutor {
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
 
         if (args.length == 0 || args[0].equalsIgnoreCase("menu")) {
-            if (!(sender instanceof Player p)) { sender.sendMessage("§cOnly players."); return true; }
+            if (!(sender instanceof Player p)) { send(sender, "only-players", "&cOnly players can use this command."); return true; }
             new ProfileMenu(plugin, p).open();
             return true;
         }
@@ -39,7 +39,7 @@ public class WSLCommand implements CommandExecutor {
             return true;
         }
         if (args[0].equalsIgnoreCase("deliveries")) {
-            if (!(sender instanceof Player p)) { sender.sendMessage("§cOnly players."); return true; }
+            if (!(sender instanceof Player p)) { send(sender, "only-players", "&cOnly players can use this command."); return true; }
             new DeliveriesMenu(plugin, p, plugin.getDeliveryService().getQueue(p.getUniqueId())).open();
             return true;
         }
@@ -51,75 +51,82 @@ public class WSLCommand implements CommandExecutor {
         switch (args[0].toLowerCase()) {
             case "reload":
                 if (!sender.hasPermission("woostorelink.reload")) {
-                    sender.sendMessage("§cYou do not have permission to use this command.");
+                    send(sender, "no-permission", "&cYou do not have permission to use this command.");
                     return true;
                 }
                 plugin.reloadConfig();
                 plugin.loadLanguage();
-                sender.sendMessage("§a✔ Configuration and language reloaded.");
+                send(sender, "reloaded", "&aConfiguration and language reloaded.");
                 break;
 
             case "check":
                 if (!(sender instanceof Player) || !sender.hasPermission("woostorelink.check")) {
-                    sender.sendMessage("§cYou do not have permission or must be a player.");
+                    send(sender, "permission-player", "&cYou do not have permission or must be a player.");
                     return true;
                 }
                 plugin.processPendingDeliveries((Player) sender);
-                sender.sendMessage("§a✔ Checked your pending deliveries.");
+                send(sender, "checked-self", "&aChecked your pending deliveries.");
                 break;
 
             case "checkplayer":
                 if (!sender.hasPermission("woostorelink.check.others")) {
-                    sender.sendMessage("§cYou do not have permission to use this command.");
+                    send(sender, "no-permission", "&cYou do not have permission to use this command.");
                     return true;
                 }
                 if (args.length < 2) {
-                    sender.sendMessage("§cUsage: /wsl checkplayer <player>");
+                    send(sender, "usage-checkplayer", "&cUsage: /wsl checkplayer <player>");
                     break;
                 }
                 Player target = Bukkit.getPlayerExact(args[1]);
                 if (target != null) {
                     plugin.processPendingDeliveries(target);
-                    sender.sendMessage("§a✔ Checked deliveries for " + target.getName());
+                    sender.sendMessage(color(msg("checked-other", "&aChecked deliveries for %player%.")
+                            .replace("%player%", target.getName())));
                 } else {
-                    sender.sendMessage("§cPlayer not found.");
+                    send(sender, "player-not-found", "&cPlayer not found.");
                 }
                 break;
 
             case "status":
                 if (!sender.hasPermission("woostorelink.status")) {
-                    sender.sendMessage("§cYou do not have permission to use this command.");
+                    send(sender, "no-permission", "&cYou do not have permission to use this command.");
                     return true;
                 }
                 String tokenCfg = plugin.getConfig().getString("api-token");
                 String domain = plugin.getConfig().getString("api-domain");
                 boolean configured = tokenCfg != null && !tokenCfg.isEmpty() && domain != null && !domain.isEmpty();
-                sender.sendMessage("§eREST API: " + (configured ? "§aConfigured ✔" : "§cMissing config ✘"));
+                sender.sendMessage(color(msg("status-rest-api", "&eREST API: %status%")
+                        .replace("%status%", configured
+                                ? msg("status-configured", "&aConfigured")
+                                : msg("status-missing-config", "&cMissing config"))));
 
                 if (sender instanceof Player player) {
                     String name = player.getName();
                     long lastSync = plugin.getLinkManager().getLastSync(name);
                     long nextSync = lastSync + 3600;
-                    sender.sendMessage("§7Last Sync: §f" + (lastSync == 0 ? "Never" : formatTime(lastSync)));
-                    sender.sendMessage("§7Next Check: §f" + (lastSync == 0 ? "N/A" : formatTime(nextSync)));
+                    sender.sendMessage(color(msg("status-last-sync", "&7Last Sync: &f%time%")
+                            .replace("%time%", lastSync == 0 ? msg("status-never", "Never") : formatTime(lastSync))));
+                    sender.sendMessage(color(msg("status-next-check", "&7Next Check: &f%time%")
+                            .replace("%time%", lastSync == 0 ? msg("status-na", "N/A") : formatTime(nextSync))));
                     if (player.isOp()) {
                         String token = plugin.getConfig().getString("api-token");
-                        sender.sendMessage("§7Token: §f" + (token != null ? token : "Not set"));
+                        sender.sendMessage(color(msg("status-token", "&7Token: &f%token%")
+                                .replace("%token%", token != null ? token : msg("status-not-set", "Not set"))));
                     }
                 }
                 return true;
 
             case "wp-link":
                 if (!(sender instanceof Player)) {
-                    sender.sendMessage("§cOnly players can use this command.");
+                    send(sender, "only-players", "&cOnly players can use this command.");
                     return true;
                 }
                 if (!sender.hasPermission("woostorelink.wp-link")) {
-                    sender.sendMessage("§cYou do not have permission to use this command.");
+                    send(sender, "no-permission", "&cYou do not have permission to use this command.");
                     return true;
                 }
                 if (args.length < 2) {
-                    sender.sendMessage("§cUsage: /wsl wp-link <your-email>");
+                    send(sender, "usage-wp-link", "&cUsage: /wsl wp-link <your-email>");
                     return true;
                 }
                 requestLink((Player) sender, args[1]);
@@ -127,15 +134,15 @@ public class WSLCommand implements CommandExecutor {
 
             case "wp-verify":
                 if (!(sender instanceof Player)) {
-                    sender.sendMessage("§cOnly players can use this command.");
+                    send(sender, "only-players", "&cOnly players can use this command.");
                     return true;
                 }
                 if (!sender.hasPermission("woostorelink.wp-verify")) {
-                    sender.sendMessage("§cYou do not have permission to use this command.");
+                    send(sender, "no-permission", "&cYou do not have permission to use this command.");
                     return true;
                 }
                 if (args.length < 2) {
-                    sender.sendMessage("§cUsage: /wsl wp-verify <code>");
+                    send(sender, "usage-wp-verify", "&cUsage: /wsl wp-verify <code>");
                     return true;
                 }
                 verifyCode((Player) sender, args[1]);
@@ -148,7 +155,7 @@ public class WSLCommand implements CommandExecutor {
                 return true;
 
             default:
-                sender.sendMessage("§cUnknown subcommand. Type §e/wsl help §cfor help.");
+                send(sender, "unknown-subcommand", "&cUnknown subcommand. Type &e/wsl help &cfor help.");
                 break;
         }
 
@@ -156,6 +163,14 @@ public class WSLCommand implements CommandExecutor {
     }
 
     private void sendHelp(CommandSender sender) { /* igual que lo tenías */ }
+
+    private String msg(String key, String fallback) {
+        return plugin.getLang().getOrDefault(key, fallback);
+    }
+
+    private void send(CommandSender sender, String key, String fallback) {
+        sender.sendMessage(color(msg(key, fallback)));
+    }
 
     // Devuelve un texto de error legible a partir del body del API.
 // Soporta {"error": "..."} o {"message": "..."} y fallback a body tal cual.
