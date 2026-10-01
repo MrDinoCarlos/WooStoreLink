@@ -17,11 +17,20 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
-public class WSLCommand implements CommandExecutor {
+public class WSLCommand implements TabExecutor {
 
     private final WooStoreLink plugin;
+    private final Map<UUID, Long> pendingUnlinks = new ConcurrentHashMap<>();
+    private static final long UNLINK_CONFIRMATION_MILLIS = 30_000L;
 
     public WSLCommand(WooStoreLink plugin) { this.plugin = plugin; }
 
@@ -54,8 +63,7 @@ public class WSLCommand implements CommandExecutor {
                     send(sender, "no-permission", "&cYou do not have permission to use this command.");
                     return true;
                 }
-                plugin.reloadConfig();
-                plugin.loadLanguage();
+                plugin.reloadPluginConfiguration();
                 send(sender, "reloaded", "&aConfiguration and language reloaded.");
                 break;
 
@@ -111,7 +119,7 @@ public class WSLCommand implements CommandExecutor {
                     if (player.isOp()) {
                         String token = plugin.getConfig().getString("api-token");
                         sender.sendMessage(color(msg("status-token", "&7Token: &f%token%")
-                                .replace("%token%", token != null ? token : msg("status-not-set", "Not set"))));
+                                .replace("%token%", maskToken(token))));
                     }
                 }
                 return true;
@@ -148,6 +156,24 @@ public class WSLCommand implements CommandExecutor {
                 verifyCode((Player) sender, args[1]);
                 return true;
 
+            case "unlink":
+            case "wp-unlink":
+                if (!(sender instanceof Player player)) {
+                    send(sender, "only-players", "&cOnly players can use this command.");
+                    return true;
+                }
+                if (!sender.hasPermission("woostorelink.wp-unlink")) {
+                    send(sender, "no-permission", "&cYou do not have permission to use this command.");
+                    return true;
+                }
+                if (args.length >= 2 && "confirm".equalsIgnoreCase(args[1])) {
+                    confirmUnlink(player);
+                } else {
+                    pendingUnlinks.put(player.getUniqueId(), System.currentTimeMillis() + UNLINK_CONFIRMATION_MILLIS);
+                    send(player, "unlink-confirm", "&eThis will unlink your Minecraft account. Type &6/wsl unlink confirm &ewithin 30 seconds to continue.");
+                }
+                return true;
+
             case "achievements":
             case "achievement":
             case "ach":
@@ -163,6 +189,44 @@ public class WSLCommand implements CommandExecutor {
     }
 
     private void sendHelp(CommandSender sender) { /* igual que lo tenías */ }
+
+    @Override
+    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+        List<String> suggestions = new ArrayList<>();
+        if (args.length == 1) {
+            if (sender instanceof Player) {
+                suggestions.add("menu");
+                suggestions.add("deliveries");
+                suggestions.add("help");
+                if (sender.hasPermission("woostorelink.check")) suggestions.add("check");
+                if (sender.hasPermission("woostorelink.status")) suggestions.add("status");
+                if (sender.hasPermission("woostorelink.wp-link")) suggestions.add("wp-link");
+                if (sender.hasPermission("woostorelink.wp-verify")) suggestions.add("wp-verify");
+                if (sender.hasPermission("woostorelink.wp-unlink")) suggestions.add("unlink");
+                if (sender.hasPermission("woostorelink.achievements")) suggestions.add("achievements");
+            }
+            if (sender.hasPermission("woostorelink.check.others")) suggestions.add("checkplayer");
+            if (sender.hasPermission("woostorelink.reload")) suggestions.add("reload");
+        } else if (args.length == 2) {
+            String subcommand = args[0].toLowerCase(Locale.ROOT);
+            if (("unlink".equals(subcommand) || "wp-unlink".equals(subcommand))
+                    && sender.hasPermission("woostorelink.wp-unlink")) {
+                suggestions.add("confirm");
+            } else if ("checkplayer".equals(subcommand) && sender.hasPermission("woostorelink.check.others")) {
+                Bukkit.getOnlinePlayers().forEach(player -> suggestions.add(player.getName()));
+            } else if (("achievements".equals(subcommand) || "achievement".equals(subcommand))
+                    && sender.hasPermission("woostorelink.achievements.others")) {
+                Bukkit.getOnlinePlayers().forEach(player -> suggestions.add(player.getName()));
+            }
+        }
+
+        String prefix = args.length == 0 ? "" : args[args.length - 1].toLowerCase(Locale.ROOT);
+        return suggestions.stream()
+                .filter(value -> value.toLowerCase(Locale.ROOT).startsWith(prefix))
+                .distinct()
+                .sorted(Comparator.naturalOrder())
+                .collect(Collectors.toList());
+    }
 
     private String msg(String key, String fallback) {
         return plugin.getLang().getOrDefault(key, fallback);
@@ -215,12 +279,11 @@ public class WSLCommand implements CommandExecutor {
             try {
                 String apiUrl = domain + "/wp-json/storelinkformc/v1/request-link";
                 String payload = "email=" + URLEncoder.encode(email, StandardCharsets.UTF_8.name()) +
-                        "&player=" + URLEncoder.encode(player.getName(), StandardCharsets.UTF_8.name()) +
-                        "&token="  + URLEncoder.encode(token, StandardCharsets.UTF_8.name());
+                        "&player=" + URLEncoder.encode(player.getName(), StandardCharsets.UTF_8.name());
 
-                // Logs de depuración completos
-                plugin.getLogger().info("[wp-link] POST " + apiUrl);
-                plugin.getLogger().info("[wp-link] Payload: " + payload);
+                if (plugin.getConfig().getBoolean("debug", false)) {
+                    plugin.getLogger().info("[wp-link] POST " + apiUrl);
+                }
 
                 conn = (HttpURLConnection) new URL(apiUrl).openConnection();
                 conn.setRequestMethod("POST");
@@ -231,9 +294,9 @@ public class WSLCommand implements CommandExecutor {
                 // Cabeceras extra "por si acaso"
                 conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
                 conn.setRequestProperty("Accept", "application/json");
-                conn.setRequestProperty("User-Agent", "WooStoreLink/0.8.0 (Minecraft)");
-                // Token también por header (además de en el body)
+                conn.setRequestProperty("User-Agent", "WooStoreLink/2.0.2 (Minecraft 1.20-26.3)");
                 conn.setRequestProperty("X-StoreLink-Token", token);
+                conn.setRequestProperty("Authorization", "Bearer " + token);
 
                 try (OutputStream os = conn.getOutputStream()) {
                     os.write(payload.getBytes(StandardCharsets.UTF_8));
@@ -249,14 +312,16 @@ public class WSLCommand implements CommandExecutor {
                                     .lines().collect(Collectors.joining("\n"));
                 }
 
-                plugin.getLogger().info("[wp-link] HTTP " + responseCode + ": " + responseBody);
+                if (plugin.getConfig().getBoolean("debug", false)) {
+                    plugin.getLogger().info("[wp-link] HTTP " + responseCode);
+                }
 
                 // Mostramos la respuesta real en el chat SIEMPRE en modo debug (puedes quitarlo luego)
                 // player.sendMessage("§7[Debug] " + responseBody);
 
                 if (responseCode != 200) {
                     String reason = extractApiErrorReason(responseBody);
-                    player.sendMessage(color(lang.getOrDefault("link-error",
+                    sendPlayer(player, color(lang.getOrDefault("link-error",
                             "&c✖ Failed: %reason%").replace("%reason%", reason)));
                     return;
                 }
@@ -277,13 +342,13 @@ public class WSLCommand implements CommandExecutor {
                 if (!success) {
                     // 200 pero success=false -> mostramos causa si viene
                     String reason = extractApiErrorReason(responseBody);
-                    player.sendMessage(color(lang.getOrDefault("link-error",
+                    sendPlayer(player, color(lang.getOrDefault("link-error",
                             "&c✖ Failed: %reason%").replace("%reason%", reason)));
                     return;
                 }
 
                 // OK real
-                player.sendMessage(color(lang.getOrDefault("link-started",
+                sendPlayer(player, color(lang.getOrDefault("link-started",
                         "&a✔ Verification code sent to your email.")));
 
                 // (Opcional) mostrar el código si el backend lo adjunta y tienes debug activo
@@ -293,15 +358,14 @@ public class WSLCommand implements CommandExecutor {
                         var el = com.google.gson.JsonParser.parseString(responseBody);
                         if (el.isJsonObject() && el.getAsJsonObject().has("code")) {
                             String code = el.getAsJsonObject().get("code").getAsString();
-                            player.sendMessage(color("&7[debug] Verification code: &e" + code));
+                            sendPlayer(player, color("&7[debug] Verification code: &e" + code));
                         }
                     } catch (Throwable ignored) {}
                 }
 
             } catch (Exception e) {
                 plugin.getLogger().warning("[wp-link] Exception: " + e.getClass().getSimpleName() + ": " + e.getMessage());
-                e.printStackTrace();
-                player.sendMessage(color(lang.getOrDefault("link-error",
+                sendPlayer(player, color(lang.getOrDefault("link-error",
                         "&c✖ Failed: %reason%").replace("%reason%", e.getMessage() != null ? e.getMessage() : "unknown error")));
             } finally {
                 if (conn != null) conn.disconnect();
@@ -333,8 +397,7 @@ public class WSLCommand implements CommandExecutor {
             try {
                 String apiUrl = domain + "/wp-json/storelinkformc/v1/verify-link";
                 String payload = "email=" + URLEncoder.encode(email, "UTF-8") +
-                        "&code=" + URLEncoder.encode(code, "UTF-8") +
-                        "&token=" + URLEncoder.encode(token, "UTF-8");
+                        "&code=" + URLEncoder.encode(code, "UTF-8");
 
                 plugin.getLogger().info("[wp-verify] POST " + apiUrl + " email=" + email + " player=" + player.getName());
 
@@ -344,6 +407,9 @@ public class WSLCommand implements CommandExecutor {
                 conn.setConnectTimeout(10000);
                 conn.setReadTimeout(15000);
                 conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+                conn.setRequestProperty("Accept", "application/json");
+                conn.setRequestProperty("X-StoreLink-Token", token);
+                conn.setRequestProperty("Authorization", "Bearer " + token);
 
                 try (OutputStream os = conn.getOutputStream()) {
                     os.write(payload.getBytes(StandardCharsets.UTF_8));
@@ -366,21 +432,22 @@ public class WSLCommand implements CommandExecutor {
                 if (responseCode == 200) {
                     plugin.getLinkManager().clear(player.getName());
                     plugin.getLinkManager().setLinked(player.getName(), true);
-                    player.sendMessage(color(lang.getOrDefault("verify-success",
+                    sendPlayer(player, color(lang.getOrDefault("verify-success",
                             "&a✔ Your account has been linked!")));
-                    plugin.getLogger().info("[wp-verify] 200 OK: " + responseBody);
+                    if (plugin.getConfig().getBoolean("debug", false)) {
+                        plugin.getLogger().info("[wp-verify] HTTP 200");
+                    }
                 } else {
                     String reason = extractApiErrorReason(responseBody);
-                    player.sendMessage(color(lang.getOrDefault("verify-error",
+                    sendPlayer(player, color(lang.getOrDefault("verify-error",
                             "&c✖ Failed: %reason%").replace("%reason%", reason)));
-                    plugin.getLogger().warning("[wp-verify] HTTP " + responseCode + ": " + responseBody);
+                    plugin.getLogger().warning("[wp-verify] HTTP " + responseCode + ": " + reason);
                 }
 
 
             } catch (Exception e) {
                 plugin.getLogger().warning("[wp-verify] Exception: " + e.getClass().getSimpleName() + ": " + e.getMessage());
-                e.printStackTrace();
-                player.sendMessage(color(lang.getOrDefault("verify-error",
+                sendPlayer(player, color(lang.getOrDefault("verify-error",
                         "&c✖ Failed: %reason%").replace("%reason%", e.getMessage() != null ? e.getMessage() : "unknown error")));
             } finally {
                 if (conn != null) conn.disconnect();
@@ -389,10 +456,105 @@ public class WSLCommand implements CommandExecutor {
     }
 
 
+    private void confirmUnlink(Player player) {
+        Long expiresAt = pendingUnlinks.remove(player.getUniqueId());
+        if (expiresAt == null || expiresAt < System.currentTimeMillis()) {
+            send(player, "unlink-expired", "&cThe confirmation expired. Run &e/wsl unlink &cagain.");
+            return;
+        }
+
+        String domain = plugin.getConfig().getString("api-domain", "").trim();
+        String token = plugin.getConfig().getString("api-token", "").trim();
+        if (domain.isEmpty() || token.isEmpty()) {
+            player.sendMessage(color(msg("unlink-error", "&cCould not unlink: %reason%")
+                    .replace("%reason%", "Missing api-domain/api-token in config.yml")));
+            return;
+        }
+        while (domain.endsWith("/")) {
+            domain = domain.substring(0, domain.length() - 1);
+        }
+        String finalDomain = domain;
+        send(player, "unlink-processing", "&7Unlinking your account...");
+
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            HttpURLConnection connection = null;
+            try {
+                String apiUrl = finalDomain + "/wp-json/storelinkformc/v1/unlink";
+                String payload = "player=" + URLEncoder.encode(player.getName(), StandardCharsets.UTF_8.name());
+                connection = (HttpURLConnection) new URL(apiUrl).openConnection();
+                connection.setRequestMethod("POST");
+                connection.setDoOutput(true);
+                connection.setConnectTimeout(10_000);
+                connection.setReadTimeout(15_000);
+                connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
+                connection.setRequestProperty("Accept", "application/json");
+                connection.setRequestProperty("User-Agent", "WooStoreLink/2.0.2 (Minecraft 1.20-26.3)");
+                connection.setRequestProperty("X-StoreLink-Token", token);
+                connection.setRequestProperty("Authorization", "Bearer " + token);
+
+                try (OutputStream output = connection.getOutputStream()) {
+                    output.write(payload.getBytes(StandardCharsets.UTF_8));
+                }
+
+                int responseCode = connection.getResponseCode();
+                InputStream responseStream = responseCode >= 200 && responseCode < 300
+                        ? connection.getInputStream() : connection.getErrorStream();
+                String responseBody = "";
+                if (responseStream != null) {
+                    try (InputStream input = responseStream;
+                         BufferedReader reader = new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8))) {
+                        responseBody = reader.lines().limit(50).collect(Collectors.joining("\n"));
+                    }
+                }
+
+                if (responseCode >= 200 && responseCode < 300) {
+                    plugin.getLinkManager().clear(player.getName());
+                    plugin.getLinkManager().setLinked(player.getName(), false);
+                    sendPlayer(player, color(msg("unlink-success", "&aYour Minecraft account has been unlinked.")));
+                } else {
+                    String reason = extractApiErrorReason(responseBody);
+                    sendPlayer(player, color(msg("unlink-error", "&cCould not unlink: %reason%")
+                            .replace("%reason%", reason)));
+                    plugin.getLogger().warning("[wp-unlink] HTTP " + responseCode + ": " + reason);
+                }
+            } catch (Exception exception) {
+                String reason = exception.getMessage() == null ? exception.getClass().getSimpleName() : exception.getMessage();
+                sendPlayer(player, color(msg("unlink-error", "&cCould not unlink: %reason%")
+                        .replace("%reason%", reason)));
+                plugin.getLogger().warning("[wp-unlink] " + exception.getClass().getSimpleName() + ": " + reason);
+            } finally {
+                if (connection != null) connection.disconnect();
+            }
+        });
+    }
+
     private String formatTime(long unix) {
         java.time.Instant instant = java.time.Instant.ofEpochSecond(unix);
         java.time.ZonedDateTime zdt = instant.atZone(java.time.ZoneId.systemDefault());
         return java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(zdt);
+    }
+
+    private String maskToken(String token) {
+        if (token == null || token.isBlank()) {
+            return msg("status-not-set", "Not set");
+        }
+        if (token.length() <= 8) {
+            return "********";
+        }
+        return token.substring(0, 4) + "…" + token.substring(token.length() - 4);
+    }
+
+    private void sendPlayer(Player player, String message) {
+        Runnable send = () -> {
+            if (player.isOnline()) {
+                player.sendMessage(message);
+            }
+        };
+        if (Bukkit.isPrimaryThread()) {
+            send.run();
+        } else {
+            Bukkit.getScheduler().runTask(plugin, send);
+        }
     }
 
     private void handleAchievements(CommandSender sender, String[] args) { /* igual que lo tenías */ }

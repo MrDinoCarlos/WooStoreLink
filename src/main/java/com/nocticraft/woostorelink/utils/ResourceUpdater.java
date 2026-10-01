@@ -111,8 +111,8 @@ public final class ResourceUpdater {
                 "    \\ V  V / (_) | (_) |___) | || (_) | | |  __/ |___| | | | |   <",
                 "     \\_/\\_/ \\___/ \\___/|____/ \\__\\___/|_|  \\___|_____|_|_| |_|_|\\_\\",
                 "",
-                "  WooStoreLink " + plugin.getDescription().getVersion() + " - Release 1.0",
-                "  Minecraft compatibility: 1.20.x, 1.21.x, 1.26.x",
+                "  WooStoreLink " + plugin.getDescription().getVersion() + " - Release 2.0",
+                "  Minecraft compatibility: 1.20 through 26.3",
                 "  Keep config-version untouched. It lets WooStoreLink add new options",
                 "  during updates without replacing your existing server settings.",
                 "");

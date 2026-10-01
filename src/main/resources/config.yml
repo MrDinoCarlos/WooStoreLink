@@ -1,16 +1,16 @@
 # ============================================================================ #
 #                              WooStoreLink                                    #
-#                       Release 1.0 - Configuration                            #
+#                       Release 2.0 - Configuration                            #
 # ============================================================================ #
 # Versioned configuration file. Keep config-version unchanged so WooStoreLink
 # can add new options on future updates without overwriting your settings.
 #
-# Compatibility: Minecraft 1.20.x, 1.21.x and 1.26.x
+# Compatibility: Minecraft 1.20 through 26.3
 # Author: MrDinoCarlos
 # Website: https://mrdino.es
 # ============================================================================ #
 
-config-version: "1.0.0"
+config-version: "2.0.2"
 
 # Token generated in your WordPress admin (WooStoreLink settings page).
 api-token: "REPLACE_WITH_YOUR_API_TOKEN"
@@ -23,6 +23,21 @@ language: en
 
 # Interval (in minutes) to automatically check pending deliveries.
 check-interval-minutes: 1
+
+# Network and load controls. The v2 API checks all online players in one HTTP
+# request and processes at most one player's result per server tick.
+network:
+  connect-timeout-seconds: 5
+  read-timeout-seconds: 10
+  max-players-per-request: 100
+  max-deliveries-per-player: 50
+
+# Do not print tokens or full API payloads. Enable only while diagnosing issues.
+debug: false
+
+# Check Modrinth once at startup and notify the console and server admins.
+update-check:
+  enabled: true
 
 # Number of days to keep log files before auto-cleaning.
 log-retention-days: 30

@@ -5,18 +5,26 @@ import com.nocticraft.woostorelink.delivery.DeliveryService;
 import com.nocticraft.woostorelink.utils.*;
 import com.nocticraft.woostorelink.utils.menu.MenuRegistry;
 import org.bukkit.Bukkit;
+import org.bukkit.command.PluginCommand;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scheduler.BukkitTask;
 
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -27,7 +35,15 @@ public class WooStoreLink extends JavaPlugin implements Listener {
 
     private LanguageLoader lang;
     private String currentLangCode = "en";
-    private DeliveryFetcher fetcher;
+    private volatile DeliveryFetcher fetcher;
+    private ExecutorService networkExecutor;
+    private ExecutorService updateExecutor;
+    private ExecutorService logExecutor;
+    private BukkitTask autoCheckTask;
+    private final Set<UUID> inFlightPlayers = ConcurrentHashMap.newKeySet();
+    private final Queue<FetchedBatch> processingQueue = new ConcurrentLinkedQueue<>();
+    private final Set<UUID> updateNotified = new HashSet<>();
+    private volatile String availableUpdate;
 
     // Local cache to prevent duplicate deliveries while the backend is being updated
     private final Set<Integer> recentlyDelivered = new HashSet<>();
@@ -44,9 +60,28 @@ public class WooStoreLink extends JavaPlugin implements Listener {
     private final com.google.gson.Gson gson = new com.google.gson.Gson();
     public com.google.gson.Gson getGson() { return gson; }
 
+    private record FetchTarget(UUID uuid, String name) { }
+    private record FetchedBatch(UUID uuid, String name, List<Delivery> deliveries) { }
+
 
     @Override
     public void onEnable() {
+        networkExecutor = Executors.newSingleThreadExecutor(runnable -> {
+            Thread thread = new Thread(runnable, "WooStoreLink-Network");
+            thread.setDaemon(true);
+            return thread;
+        });
+        logExecutor = Executors.newSingleThreadExecutor(runnable -> {
+            Thread thread = new Thread(runnable, "WooStoreLink-Log");
+            thread.setDaemon(true);
+            return thread;
+        });
+        updateExecutor = Executors.newSingleThreadExecutor(runnable -> {
+            Thread thread = new Thread(runnable, "WooStoreLink-UpdateCheck");
+            thread.setDaemon(true);
+            return thread;
+        });
+
         saveDefaultConfig();
         ResourceUpdater.updateConfig(this);
         reloadConfig();
@@ -58,19 +93,12 @@ public class WooStoreLink extends JavaPlugin implements Listener {
 
         getLogger().info("Loaded language: " + currentLangCode + " | Example: " + lang.get("plugin-enabled"));
         Bukkit.getPluginManager().registerEvents(this, this);
-        getCommand("wsl").setExecutor(new WSLCommand(this));
+        WSLCommand command = new WSLCommand(this);
+        PluginCommand wslCommand = Objects.requireNonNull(
+                getCommand("wsl"), "Command 'wsl' is missing from plugin.yml");
+        wslCommand.setExecutor(command);
+        wslCommand.setTabCompleter(command);
         StartupDisplay.show(this, lang);
-
-        int minutes = getConfig().getInt("check-interval-minutes", 1);
-        long ticks = minutes * 60L * 20L;
-
-        // Timer que ahora llama a una versión asíncrona internamente
-        Bukkit.getScheduler().runTaskTimer(this, () -> {
-            logDelivery("[Auto] " + lang.getOrDefault("auto-check", "Checking pending deliveries for online players..."));
-            for (Player player : Bukkit.getOnlinePlayers()) {
-                processPendingDeliveries(player); // ahora no bloquea el main thread
-            }
-        }, 20L, ticks);
 
         // Correct reference to the language loader
         this.achievementManager = new AchievementManager(this, lang);
@@ -80,6 +108,11 @@ public class WooStoreLink extends JavaPlugin implements Listener {
 
         // Servicio de entregas (cola + reintentos periódicos)
         this.deliveryService = new DeliveryService(this);
+
+        // Results are deliberately spread over ticks: one player's batch per tick.
+        Bukkit.getScheduler().runTaskTimer(this, this::processNextFetchedBatch, 1L, 1L);
+        scheduleAutoCheck();
+        checkForUpdates();
 
     }
 
@@ -91,12 +124,22 @@ public class WooStoreLink extends JavaPlugin implements Listener {
 
     @Override
     public void onDisable() {
+        if (autoCheckTask != null) {
+            autoCheckTask.cancel();
+        }
+        if (deliveryService != null) {
+            deliveryService.shutdown();
+        }
+        shutdownExecutor(networkExecutor);
+        shutdownExecutor(updateExecutor);
+        shutdownExecutor(logExecutor);
         Bukkit.getConsoleSender().sendMessage("§c✖ WooStoreLink has been disabled.");
     }
 
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
-        processPendingDeliveries(event.getPlayer()); // ahora async
+        Bukkit.getScheduler().runTaskLater(this, () -> processPendingDeliveries(event.getPlayer()), 20L);
+        Bukkit.getScheduler().runTaskLater(this, () -> notifyUpdate(event.getPlayer()), 40L);
         if (deliveryService != null) {
             deliveryService.tryDeliverPlayer(event.getPlayer());
         }
@@ -108,14 +151,82 @@ public class WooStoreLink extends JavaPlugin implements Listener {
      * a través de processFetchedDeliveries(...).
      */
     public void processPendingDeliveries(Player player) {
-        Bukkit.getScheduler().runTaskAsynchronously(this, () -> {              // ASYNC HTTP
-            List<Delivery> deliveries = fetcher.fetchDeliveries(player.getName());
-            if (deliveries.isEmpty()) return;
+        requestDeliveryChecks(List.of(player));
+    }
 
-            // Volvemos al hilo principal para procesar las entregas
-            Bukkit.getScheduler().runTask(this, () ->                          // BACK TO MAIN
-                    processFetchedDeliveries(player, deliveries));
-        });
+    public void reloadPluginConfiguration() {
+        reloadConfig();
+        loadLanguage();
+        fetcher = new DeliveryFetcher(this);
+        scheduleAutoCheck();
+    }
+
+    private void scheduleAutoCheck() {
+        if (autoCheckTask != null) {
+            autoCheckTask.cancel();
+        }
+        int minutes = Math.max(1, Math.min(1440, getConfig().getInt("check-interval-minutes", 1)));
+        long interval = minutes * 60L * 20L;
+        autoCheckTask = Bukkit.getScheduler().runTaskTimer(this, () -> {
+            if (Bukkit.getOnlinePlayers().isEmpty()) {
+                return;
+            }
+            logDelivery("[Auto] " + lang.getOrDefault("auto-check", "Checking pending deliveries for online players..."));
+            requestDeliveryChecks(Bukkit.getOnlinePlayers());
+        }, 30L * 20L, interval);
+    }
+
+    private void requestDeliveryChecks(Collection<? extends Player> players) {
+        if (fetcher == null || !fetcher.isConfigured() || networkExecutor == null) {
+            return;
+        }
+
+        int maxPlayers = Math.max(1, Math.min(500,
+                getConfig().getInt("network.max-players-per-request", 100)));
+        List<FetchTarget> targets = new ArrayList<>();
+        for (Player player : players) {
+            if (targets.size() >= maxPlayers) {
+                break;
+            }
+            if (player.isOnline() && inFlightPlayers.add(player.getUniqueId())) {
+                targets.add(new FetchTarget(player.getUniqueId(), player.getName()));
+            }
+        }
+        if (targets.isEmpty()) {
+            return;
+        }
+
+        try {
+            networkExecutor.execute(() -> {
+                Map<String, List<Delivery>> fetched = fetcher.fetchDeliveries(
+                        targets.stream().map(FetchTarget::name).collect(Collectors.toList()));
+                for (FetchTarget target : targets) {
+                    List<Delivery> deliveries = fetched.getOrDefault(target.name(), List.of());
+                    if (deliveries.isEmpty()) {
+                        inFlightPlayers.remove(target.uuid());
+                    } else {
+                        processingQueue.offer(new FetchedBatch(target.uuid(), target.name(), deliveries));
+                    }
+                }
+            });
+        } catch (RejectedExecutionException exception) {
+            targets.forEach(target -> inFlightPlayers.remove(target.uuid()));
+        }
+    }
+
+    private void processNextFetchedBatch() {
+        FetchedBatch batch = processingQueue.poll();
+        if (batch == null) {
+            return;
+        }
+        try {
+            Player player = Bukkit.getPlayer(batch.uuid());
+            if (player != null && player.isOnline() && player.getName().equals(batch.name())) {
+                processFetchedDeliveries(player, batch.deliveries());
+            }
+        } finally {
+            inFlightPlayers.remove(batch.uuid());
+        }
     }
 
     /**
@@ -248,17 +359,20 @@ public class WooStoreLink extends JavaPlugin implements Listener {
             }
         }
 
-        // --- Notificar al backend --- (ahora en async para no bloquear)
+        // Confirm all processed deliveries in a single request on the bounded network worker.
         if (!idsToMark.isEmpty()) {
             List<Integer> idsCopy = new ArrayList<>(idsToMark);
-            Bukkit.getScheduler().runTaskAsynchronously(this, () ->           // ASYNC markAsDelivered
-                    fetcher.markAsDelivered(idsCopy));
+            try {
+                networkExecutor.execute(() -> {
+                    if (fetcher.markAsDelivered(idsCopy) && isEnabled()) {
+                        Bukkit.getScheduler().runTask(this,
+                                () -> idsCopy.forEach(recentlyDelivered::remove));
+                    }
+                });
+            } catch (RejectedExecutionException ignored) {
+                // The plugin is stopping. Keep IDs cached to prevent duplicate rewards.
+            }
         }
-
-        // --- Limpiar IDs locales en 10 segundos ---
-        Bukkit.getScheduler().runTaskLater(this, () -> {
-            idsToMark.forEach(recentlyDelivered::remove);
-        }, 200L);
 
         // --- Mensajes al jugador ---
         if (deliveredTotal > 0) {
@@ -341,19 +455,78 @@ public class WooStoreLink extends JavaPlugin implements Listener {
 
     public void logDelivery(String message) {
         String date = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
+        String time = new SimpleDateFormat("HH:mm:ss").format(new Date());
+        if (logExecutor == null) {
+            return;
+        }
+        try {
+            logExecutor.execute(() -> writeLogLine(date, time, message));
+        } catch (RejectedExecutionException ignored) {
+            // Shutdown already started.
+        }
+    }
+
+    private void writeLogLine(String date, String time, String message) {
         File logsDir = new File(getDataFolder(), "transaction-logs");
         File logFile = new File(logsDir, date + ".log");
-
         try {
-            if (!logsDir.exists()) logsDir.mkdirs();
-            if (!logFile.exists()) logFile.createNewFile();
-
-            try (FileWriter fw = new FileWriter(logFile, true)) {
-                String time = new SimpleDateFormat("HH:mm:ss").format(new Date());
-                fw.write("[" + time + "] " + message + "\n");
+            if (!logsDir.exists() && !logsDir.mkdirs()) {
+                throw new IOException("Could not create " + logsDir);
             }
-        } catch (IOException e) {
-            getLogger().warning("[Error] " + lang.getOrDefault("log-error", "Failed to write delivery log:") + " " + e.getMessage());
+            try (FileWriter writer = new FileWriter(logFile, true)) {
+                writer.write("[" + time + "] " + message + System.lineSeparator());
+            }
+        } catch (IOException exception) {
+            getLogger().warning("[Error] Failed to write delivery log: " + exception.getMessage());
+        }
+    }
+
+    private void checkForUpdates() {
+        if (!getConfig().getBoolean("update-check.enabled", true)) {
+            return;
+        }
+        try {
+            updateExecutor.execute(() -> new UpdateChecker(this).findUpdate().ifPresent(version -> {
+                availableUpdate = version;
+                String message = lang.getOrDefault("update-console",
+                                "A new WooStoreLink version %version% is available: %url%")
+                        .replace("%version%", version)
+                        .replace("%url%", UpdateChecker.DOWNLOAD_URL);
+                getLogger().warning(message);
+                if (isEnabled()) {
+                    Bukkit.getScheduler().runTask(this,
+                            () -> Bukkit.getOnlinePlayers().forEach(this::notifyUpdate));
+                }
+            }));
+        } catch (RejectedExecutionException ignored) {
+            // Shutdown already started.
+        }
+    }
+
+    private void notifyUpdate(Player player) {
+        String version = availableUpdate;
+        if (version == null || !player.hasPermission("woostorelink.update-notify")
+                || !updateNotified.add(player.getUniqueId())) {
+            return;
+        }
+        player.sendMessage(color(lang.getOrDefault("update-available",
+                        "&6WooStoreLink &e%version% &6is available: &b%url%")
+                .replace("%version%", version)
+                .replace("%url%", UpdateChecker.DOWNLOAD_URL)));
+    }
+
+    private void shutdownExecutor(ExecutorService executor) {
+        if (executor == null) {
+            return;
+        }
+        executor.shutdown();
+        try {
+            if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
+                executor.shutdownNow();
+            }
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            executor.shutdownNow();
         }
     }
 

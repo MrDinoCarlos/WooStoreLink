@@ -1,13 +1,15 @@
-language-version: "1.0.0"
+language-version: "2.0.2"
 prefix: "[WooStoreLink]"
 
 messages:
+  update-console: "Eine neue WooStoreLink-Version (%version%) ist verfuegbar: %url%"
+  update-available: "&6WooStoreLink &e%version% &6ist jetzt verfuegbar. &b%url%"
   # Start und Konsole
   plugin-enabled: "WooStoreLink erfolgreich aktiviert."
   startup-ready: "WooStoreLink ist bereit, WooCommerce-Bestellungen zu empfangen."
 
   # Allgemeine Befehlsmeldungen
-  usage: "Nutzung: /wsl <menu|help|reload|check|checkplayer|status|wp-link|wp-verify|achievements>"
+  usage: "Nutzung: /wsl <menu|help|reload|check|checkplayer|status|wp-link|wp-verify|unlink|achievements>"
   no-permission: "Du hast keine Berechtigung, diesen Befehl zu nutzen."
   permission-player: "&cDu hast keine Berechtigung oder musst ein Spieler sein."
   player-only: "Dieser Befehl kann nur von Spielern genutzt werden."
@@ -77,6 +79,11 @@ messages:
   link-error: "&cFehlgeschlagen: %reason%"
   verify-success: "&aDein Konto wurde verknuepft."
   verify-error: "&cFehlgeschlagen: %reason%"
+  unlink-confirm: "&eDadurch wird dein Minecraft-Konto getrennt. Gib innerhalb von 30 Sekunden &6/wsl unlink confirm &eein."
+  unlink-processing: "&7Dein Konto wird getrennt..."
+  unlink-success: "&aDein Minecraft-Konto wurde erfolgreich getrennt."
+  unlink-expired: "&cDie Bestaetigung ist abgelaufen. Fuehre &e/wsl unlink &cerneut aus."
+  unlink-error: "&cKonto konnte nicht getrennt werden: %reason%"
 
   # Achievements
   achievements-disabled: "&cAchievements sind derzeit deaktiviert."
@@ -136,3 +143,4 @@ messages:
   menu-help-line-status: "&e/wsl status &7- Statusinformationen"
   menu-help-line-link: "&e/wsl wp-link <email> &7- Konto verknuepfen"
   menu-help-line-verify: "&e/wsl wp-verify <code> &7- Verknuepfung bestaetigen"
+  menu-help-line-unlink: "&e/wsl unlink &7- Konto mit Bestaetigung trennen"

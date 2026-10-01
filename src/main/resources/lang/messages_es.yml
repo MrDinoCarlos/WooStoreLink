@@ -1,13 +1,15 @@
-language-version: "1.0.0"
+language-version: "2.0.2"
 prefix: "[WooStoreLink]"
 
 messages:
+  update-console: "Hay una nueva version de WooStoreLink (%version%) disponible: %url%"
+  update-available: "&6WooStoreLink &e%version% &6ya esta disponible. &b%url%"
   # Inicio y consola
   plugin-enabled: "WooStoreLink activado correctamente."
   startup-ready: "WooStoreLink esta listo para recibir pedidos de WooCommerce."
 
   # Respuestas generales de comandos
-  usage: "Uso: /wsl <menu|help|reload|check|checkplayer|status|wp-link|wp-verify|achievements>"
+  usage: "Uso: /wsl <menu|help|reload|check|checkplayer|status|wp-link|wp-verify|unlink|achievements>"
   no-permission: "No tienes permiso para usar este comando."
   permission-player: "&cNo tienes permiso o debes ser un jugador."
   player-only: "Este comando solo puede ser usado por jugadores."
@@ -77,6 +79,11 @@ messages:
   link-error: "&cError: %reason%"
   verify-success: "&aTu cuenta se ha vinculado correctamente."
   verify-error: "&cError: %reason%"
+  unlink-confirm: "&eEsto desvinculara tu cuenta de Minecraft. Escribe &6/wsl unlink confirm &een menos de 30 segundos para continuar."
+  unlink-processing: "&7Desvinculando tu cuenta..."
+  unlink-success: "&aTu cuenta de Minecraft se ha desvinculado correctamente."
+  unlink-expired: "&cLa confirmacion ha caducado. Ejecuta &e/wsl unlink &cde nuevo."
+  unlink-error: "&cNo se pudo desvincular: %reason%"
 
   # Logros
   achievements-disabled: "&cLos logros estan desactivados actualmente."
@@ -136,3 +143,4 @@ messages:
   menu-help-line-status: "&e/wsl status &7- Informacion de estado"
   menu-help-line-link: "&e/wsl wp-link <email> &7- Vincular cuenta"
   menu-help-line-verify: "&e/wsl wp-verify <codigo> &7- Verificar vinculacion"
+  menu-help-line-unlink: "&e/wsl unlink &7- Desvincular tu cuenta con confirmacion"

@@ -5,16 +5,16 @@ import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class LinkManager {
 
-    private final Map<String, String> pendingEmail = new HashMap<>(); // name -> email (temporal)
-    private final Map<String, Long> lastSync = new HashMap<>();       // name -> epoch seconds
+    private final Map<String, String> pendingEmail = new ConcurrentHashMap<>(); // name -> email (temporal)
+    private final Map<String, Long> lastSync = new ConcurrentHashMap<>();       // name -> epoch seconds
 
     // Nuevo: persistimos estado de vinculación
-    private final Map<String, Boolean> linked = new HashMap<>();
+    private final Map<String, Boolean> linked = new ConcurrentHashMap<>();
     private final WooStoreLink plugin;
     private final File store;
 
@@ -45,7 +45,7 @@ public class LinkManager {
         save();
     }
 
-    private void save() {
+    private synchronized void save() {
         try {
             store.getParentFile().mkdirs();
             YamlConfiguration yml = new YamlConfiguration();

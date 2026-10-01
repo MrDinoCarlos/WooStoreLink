@@ -1,11 +1,10 @@
-import org.gradle.api.file.DuplicatesStrategy
-
 plugins {
     id 'java'
+    id 'com.gradleup.shadow' version '8.3.6'
 }
 
 group = 'com.nocticraft'
-version = '1.20.1-0.8.0'
+version = '2.0.2'
 
 repositories {
     mavenCentral()
@@ -16,30 +15,40 @@ repositories {
 
 dependencies {
     compileOnly 'org.spigotmc:spigot-api:1.20.1-R0.1-SNAPSHOT'
-    implementation 'net.kyori:adventure-text-minimessage:4.15.0'
+    implementation 'com.google.code.gson:gson:2.13.2'
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
 }
 
 processResources {
-    // Asegura que no haya conflicto al copiar archivos duplicados
-    duplicatesStrategy = DuplicatesStrategy.INCLUDE
-
-    from("src/main/resources") {
-        include "**/*"
-    }
-
-    // Expande versión automáticamente en plugin.yml
-    filesMatching("plugin.yml") {
-        expand 'version': project.version
+    filteringCharset = 'UTF-8'
+    filesMatching('plugin.yml') {
+        expand(version: project.version)
     }
 }
 
 jar {
-    destinationDirectory.set(file("build/jars"))
+    enabled = false
 }
 
-// 👇 Añade esto para corregir los símbolos extraños
+shadowJar {
+    destinationDirectory.set(file('build/jars'))
+    archiveFileName = "WooStoreLink-mc1.20-26.3-${project.version}.jar"
+    relocate 'com.google.gson', 'com.nocticraft.woostorelink.libs.gson'
+    minimize()
+}
+
+build {
+    dependsOn shadowJar
+}
+
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
+    options.release = 17
 }
 
 tasks.withType(ProcessResources).configureEach {

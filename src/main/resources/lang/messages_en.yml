@@ -1,13 +1,15 @@
-language-version: "1.0.0"
+language-version: "2.0.2"
 prefix: "[WooStoreLink]"
 
 messages:
+  update-console: "A new WooStoreLink version (%version%) is available: %url%"
+  update-available: "&6WooStoreLink &e%version% &6is now available. &b%url%"
   # Startup and console
   plugin-enabled: "WooStoreLink enabled successfully."
   startup-ready: "WooStoreLink is ready to receive WooCommerce orders."
 
   # General command feedback
-  usage: "Usage: /wsl <menu|help|reload|check|checkplayer|status|wp-link|wp-verify|achievements>"
+  usage: "Usage: /wsl <menu|help|reload|check|checkplayer|status|wp-link|wp-verify|unlink|achievements>"
   no-permission: "You do not have permission to use this command."
   permission-player: "&cYou do not have permission or must be a player."
   player-only: "This command can only be used by players."
@@ -77,6 +79,11 @@ messages:
   link-error: "&cFailed: %reason%"
   verify-success: "&aYour account has been linked."
   verify-error: "&cFailed: %reason%"
+  unlink-confirm: "&eThis will unlink your Minecraft account. Type &6/wsl unlink confirm &ewithin 30 seconds to continue."
+  unlink-processing: "&7Unlinking your account..."
+  unlink-success: "&aYour Minecraft account has been unlinked."
+  unlink-expired: "&cThe confirmation expired. Run &e/wsl unlink &cagain."
+  unlink-error: "&cCould not unlink: %reason%"
 
   # Achievements
   achievements-disabled: "&cAchievements are currently disabled."
@@ -136,3 +143,4 @@ messages:
   menu-help-line-status: "&e/wsl status &7- Status info"
   menu-help-line-link: "&e/wsl wp-link <email> &7- Link account"
   menu-help-line-verify: "&e/wsl wp-verify <code> &7- Verify link"
+  menu-help-line-unlink: "&e/wsl unlink &7- Unlink your account with confirmation"

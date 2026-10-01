@@ -37,7 +37,8 @@ public class HelpMenu extends Menu {
                         color(plugin.getLang().getOrDefault("menu-help-line-check", "&e/wsl check &7- Check pending from store")),
                         color(plugin.getLang().getOrDefault("menu-help-line-status", "&e/wsl status &7- Status info")),
                         color(plugin.getLang().getOrDefault("menu-help-line-link", "&e/wsl wp-link <email> &7- Link account")),
-                        color(plugin.getLang().getOrDefault("menu-help-line-verify", "&e/wsl wp-verify <code> &7- Verify link"))
+                        color(plugin.getLang().getOrDefault("menu-help-line-verify", "&e/wsl wp-verify <code> &7- Verify link")),
+                        color(plugin.getLang().getOrDefault("menu-help-line-unlink", "&e/wsl unlink &7- Unlink account"))
                 )));
     }
 
